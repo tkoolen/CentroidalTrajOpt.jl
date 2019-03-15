@@ -1,3 +1,15 @@
+# Trajectory utilities
+struct Vectorized{T}
+    trajectories::T
+end
+
+(vectorized::Vectorized)(x, args...) = map(traj -> traj(x, args...), vectorized.trajectories)
+map_elements(f, vectorized::Vectorized) = Vectorized(map(f, vectorized.trajectories))
+
+function map_subfunctions(f, traj::Piecewise)
+    Piecewise(map(f, traj.subfunctions), traj.breaks; clamp=traj.clamp)
+end
+
 # Polynomial utilities
 function scale_argument(x::Polynomial{N}, s) where {N}
     Polynomial(ntuple(i -> s^(i - 1) * x.coeffs[i], Val(N)))
@@ -9,9 +21,8 @@ function simplify(model::JuMP.Model, x::JuMP.QuadExpr)
     QuadExpr(model, canonical(JuMP.moi_function.(x)))
 end
 
-JuMP.value(x::Polynomial) = Polynomial(JuMP.value.(x.coeffs))
-JuMP.value(x::BezierCurve) = BezierCurve(JuMP.value.(x.points))
-JuMP.value(x::Piecewise) = Piecewise(JuMP.value.(x.subfunctions), JuMP.value.(x.breaks), x.clamp)
+val(x) = JuMP.value(x)
+val(x::Number) = x
 
 function bezier(model::JuMP.Model, namefunc, degree::Union{Integer, Val})
     BezierCurve(ntuple(j -> @variable(model, base_name=namefunc(j)), degree + 1))
@@ -48,3 +59,7 @@ end
 # function poly_svec(model::JuMP.Model, namefunc, degree::Union{Integer, Val}, length::Union{Integer, Val})
 #     SVector(ntuple(i -> poly(model, j -> namefunc(i, j), degree), length))
 # end
+
+# JuMP.value(x::Polynomial) = Polynomial(JuMP.value.(x.coeffs))
+# JuMP.value(x::BezierCurve) = BezierCurve(JuMP.value.(x.points))
+# JuMP.value(x::Piecewise) = Piecewise(JuMP.value.(x.subfunctions), JuMP.value.(x.breaks), x.clamp)

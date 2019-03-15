@@ -1,11 +1,25 @@
 struct CentroidalTrajectoryProblem
     model::JuMP.Model
+
+    # Axes
+    c_coeffs
+    f_coeffs
+    contacts
+    pieces
+    coords
+    coord2ds
+
+    # Variables
     c_vars
     f_vars
     f̄_vars
     r_vars
     r̄_vars
     τn_vars
+    Δts
+
+    # Other data
+    normals
 end
 
 function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory;
@@ -36,7 +50,7 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory;
     bs = AxisArray(fill([0.5, 0.5, 0.5, 0.5], num_contacts), contacts);
 
     # Time stuff
-    Δt_tolerance = 0.05
+    Δt_tolerance = 0.05 # TODO: constructor arg
 
     model = Model(optimizer_factory)
 
@@ -92,6 +106,7 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory;
 
         # Final conditions
         if i == num_pieces
+            @constraint model map(x -> x(1), c) .== c0 # TODO
             @constraint model map(x -> x(1), c′) .== 0
             @constraint model map(x -> x(1), c′′) .== 0
         end
@@ -165,7 +180,11 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory;
         c′prev = c′
     end
 
-    CentroidalTrajectoryProblem(model, c_vars, f_vars, f̄_vars, r_vars, r̄_vars, τn_vars)
+    CentroidalTrajectoryProblem(model,
+        c_coeffs, f_coeffs, contacts, pieces, coords, coord2ds,
+        c_vars, f_vars, f̄_vars, r_vars, r̄_vars, τn_vars, Δts,
+        ns
+    )
 end
 
-solve!(problem::CentroidalTrajectoryProblem) = optimize!(problem.model)
+normals(problem) = problem.normals

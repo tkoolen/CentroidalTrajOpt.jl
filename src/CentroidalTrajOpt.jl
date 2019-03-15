@@ -2,12 +2,21 @@ module CentroidalTrajOpt
 
 export
     CentroidalTrajectoryProblem,
-    solve!
+    solve!,
+    center_of_mass,
+    normals
 
 # Re-exports from other packages
 export
     SVector,
-    with_optimizer
+    with_optimizer,
+    derivative,
+    breaks
+
+# Should move
+export
+    map_subfunctions,
+    map_elements
 
 using JuMP
 using LinearAlgebra
@@ -19,11 +28,13 @@ using AxisArrays
 
 import QPControl
 
-using QPControl.Trajectories: BezierCurve, derivative, Piecewise
+using QPControl.Trajectories: BezierCurve, Piecewise, derivative, breaks
+using StaticUnivariatePolynomials: derivative
 
 const SUP = StaticUnivariatePolynomials
 
 include("util.jl")
 include("problem.jl")
+include("result.jl")
 
 end # module
