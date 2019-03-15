@@ -3,6 +3,17 @@ uuid = "e21b34eb-f2c9-558f-afd6-4aa30e1b9e96"
 authors = ["Twan Koolen <koolen.twan@gmail.com>"]
 version = "0.1.0"
 
+[deps]
+AxisArrays = "39de3d68-74b9-583c-8d2d-e117c070f3a9"
+CoordinateTransformations = "150eb455-5306-5404-9cee-2592286d6298"
+JuMP = "4076af6c-e467-56ae-b986-b466b2749572"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+QPControl = "d1d18edd-2826-5709-814b-0b0c7d0d034b"
+Rotations = "6038ab10-8711-5258-84ad-4b1120ba62dc"
+SCIP = "82193955-e24f-5292-bf16-6f2c5261a85f"
+StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
+StaticUnivariatePolynomials = "6f584044-cad5-5b68-a429-1e244a824f76"
+
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
