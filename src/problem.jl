@@ -17,6 +17,7 @@ struct CentroidalTrajectoryProblem
     r̄_vars
     τn_vars
     Δts
+    z_vars
 
     # Other data
     normals
@@ -34,10 +35,13 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory;
     c_num_coeffs = c_degree + 1
     f_num_coeffs = c_num_coeffs - 2
 
+    num_regions = 2 # TODO
+
     # Axes
     c_coeffs = Axis{:c_coeff}(1 : c_num_coeffs)
     f_coeffs = Axis{:f_coeff}(1 : f_num_coeffs)
     contacts = Axis{:contact}(1 : num_contacts)
+    regions = Axis{:region}(1 : num_regions)
     pieces = Axis{:piece}(1 : num_pieces)
     coords = Axis{:coord}(SVector(:x, :y, :z))
     coord2ds = Axis{:coord2d}(SVector(:x, :y))
@@ -59,6 +63,7 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory;
     # j: contact index
     # k: coordinate index
     # l: coefficient index
+    # m: region index
 
     Δts = AxisArray(fill(2.0, length(pieces)), pieces)
     # const Δts = nothing
@@ -88,11 +93,20 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory;
     r_vars = axis_array_vars(model, (i, j, k, l) -> "R[$i, $j, $k, $l]", pieces, contacts, coords, c_coeffs)
     r̄_vars = axis_array_vars(model, (i, j, k, l) -> "R̄[$i, $j, $k, $l]", pieces, contacts, coord2ds, c_coeffs)
     τn_vars = axis_array_vars(model, (i, j, l) -> "Tn[$i, $j, $l]", pieces, contacts, c_coeffs)
+    z_vars = axis_array_vars(model, (i, j, m) -> "z[$i, c$j, r$m]", pieces, contacts, regions)
+    foreach(set_binary, z_vars)
 
     cprev = nothing
     c′prev = nothing
 
     for i in 1 : num_pieces
+        # Contact/region assignment constraints
+
+        for j in 1 : num_contacts
+            # Each contact can be assigned to at most one region
+            @constraint model z_vars[pieces(i), contacts(j)] in MOI.SOS1(collect(Float64, 1 : num_regions))
+        end
+
         # CoM and derivatives
         c = [BezierCurve(c_vars[pieces(i), coords(k)]...) for k in 1 : length(coords)]
         c′ = derivative.(c)
@@ -182,7 +196,7 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory;
 
     CentroidalTrajectoryProblem(model,
         c_coeffs, f_coeffs, contacts, pieces, coords, coord2ds,
-        c_vars, f_vars, f̄_vars, r_vars, r̄_vars, τn_vars, Δts,
+        c_vars, f_vars, f̄_vars, r_vars, r̄_vars, τn_vars, Δts, z_vars,
         ns
     )
 end
