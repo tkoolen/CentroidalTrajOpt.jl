@@ -1,29 +1,3 @@
-# TODO: make configurable
-const C_DEGREE = 3
-const c_num_coeffs = C_DEGREE + 1
-const f_num_coeffs = c_num_coeffs - 2
-const num_contacts = 2
-const num_pieces = 2
-const g = SVector(0.0, 0.0, -9.81);
-
-# Axes
-const c_coeffs = Axis{:c_coeff}(1 : c_num_coeffs)
-const f_coeffs = Axis{:f_coeff}(1 : f_num_coeffs)
-const contacts = Axis{:contact}(1 : num_contacts)
-const pieces = Axis{:piece}(1 : num_pieces)
-const coords = Axis{:coord}(SVector(:x, :y, :z))
-const coord2ds = Axis{:coord2d}(SVector(:x, :y));
-
-# Environment data
-const transforms = AxisArray(fill(AffineMap(one(RotMatrix{3}), zero(SVector{3})), num_contacts), contacts)
-const μs = AxisArray(fill(0.7, num_contacts), contacts)
-const μrots = AxisArray(fill(0.0, num_contacts), contacts)
-const As = AxisArray(fill([1 0; 0 1; -1 0; 0 -1], num_contacts), contacts)
-const bs = AxisArray(fill([0.5, 0.5, 0.5, 0.5], num_contacts), contacts);
-
-# Time stuff
-const Δt_tolerance = 0.05
-
 struct CentroidalTrajectoryProblem
     model::JuMP.Model
     c_vars
@@ -34,7 +8,36 @@ struct CentroidalTrajectoryProblem
     τn_vars
 end
 
-function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory, c0::AbstractVector, ċ0::AbstractVector)
+function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory;
+        c0::AbstractVector,
+        ċ0::AbstractVector,
+        c_degree = 3,
+        num_pieces = 2,
+        num_contacts = 2, # TODO
+        g = SVector(0.0, 0.0, -9.81)
+    )
+
+    c_num_coeffs = c_degree + 1
+    f_num_coeffs = c_num_coeffs - 2
+
+    # Axes
+    c_coeffs = Axis{:c_coeff}(1 : c_num_coeffs)
+    f_coeffs = Axis{:f_coeff}(1 : f_num_coeffs)
+    contacts = Axis{:contact}(1 : num_contacts)
+    pieces = Axis{:piece}(1 : num_pieces)
+    coords = Axis{:coord}(SVector(:x, :y, :z))
+    coord2ds = Axis{:coord2d}(SVector(:x, :y))
+
+    # Environment data. TODO: rework, constructor args.
+    transforms = AxisArray(fill(AffineMap(one(RotMatrix{3}), zero(SVector{3})), num_contacts), contacts)
+    μs = AxisArray(fill(0.7, num_contacts), contacts)
+    μrots = AxisArray(fill(0.0, num_contacts), contacts)
+    As = AxisArray(fill([1 0; 0 1; -1 0; 0 -1], num_contacts), contacts)
+    bs = AxisArray(fill([0.5, 0.5, 0.5, 0.5], num_contacts), contacts);
+
+    # Time stuff
+    Δt_tolerance = 0.05
+
     model = Model(optimizer_factory)
 
     # Indexing convention:
