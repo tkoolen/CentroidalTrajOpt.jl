@@ -5,6 +5,7 @@ struct CentroidalTrajectoryProblem
     c_coeffs
     f_coeffs
     contacts
+    regions
     pieces
     coords
     coord2ds
@@ -35,7 +36,7 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory;
     c_num_coeffs = c_degree + 1
     f_num_coeffs = c_num_coeffs - 2
 
-    num_regions = 2 # TODO
+    num_regions = 1 # TODO
 
     # Axes
     c_coeffs = Axis{:c_coeff}(1 : c_num_coeffs)
@@ -47,11 +48,11 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory;
     coord2ds = Axis{:coord2d}(SVector(:x, :y))
 
     # Environment data. TODO: rework, constructor args.
-    transforms = AxisArray(fill(AffineMap(one(RotMatrix{3}), zero(SVector{3})), num_contacts), contacts)
-    μs = AxisArray(fill(0.7, num_contacts), contacts)
-    μrots = AxisArray(fill(0.0, num_contacts), contacts)
-    As = AxisArray(fill([1 0; 0 1; -1 0; 0 -1], num_contacts), contacts)
-    bs = AxisArray(fill([0.5, 0.5, 0.5, 0.5], num_contacts), contacts);
+    transforms = AxisArray(fill(AffineMap(one(RotMatrix{3}), zero(SVector{3})), num_regions), regions)
+    μs = AxisArray(fill(0.7, num_regions), regions)
+    μrots = AxisArray(fill(0.0, num_regions), regions)
+    As = AxisArray(fill([1 0; 0 1; -1 0; 0 -1], num_regions), regions)
+    bs = AxisArray(fill([0.5, 0.5, 0.5, 0.5], num_regions), regions);
 
     # Time stuff
     Δt_tolerance = 0.05 # TODO: constructor arg
@@ -147,7 +148,8 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory;
         constrain_poly_equal.(model, c′′, identity((g + ftot) .* Δtsqs[i]))
 
         # Torque balance
-        τ = sum(Polynomial.(rs[j]) × Polynomial.(fs[j]) + ns[j] .* Polynomial(τns[j]) for j = 1 : num_contacts) -
+        # TODO: assumes single region
+        τ = sum(Polynomial.(rs[j]) × Polynomial.(fs[j]) + ns[regions(1)] .* Polynomial(τns[j]) for j = 1 : num_contacts) -
             Polynomial.(c) × Polynomial.(sum(fs))
         τ = map(x -> Polynomial(simplify.(model, x.coeffs)), τ)
         constrain_poly_equal.(model, τ, 0)
@@ -158,12 +160,20 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory;
                 @constraint model A * control_point .<= b
             end
         end
-        for (r, r̄, transform) in zip(rs, r̄s, transforms)
+        for (r, r̄) in zip(rs, r̄s)
+            @assert length(regions) == 1 # TODO
+            transform = transforms[regions(1)]
             constrain_poly_equal.(model, r, transform([r̄; zero(eltype(r̄))]))
         end
 
         # Contact force constraints
-        for (f, f̄, τn, transform, n, μ, μrot) in zip(fs, f̄s, τns, transforms, ns, μs, μrots)
+        for (f, f̄, τn) in zip(fs, f̄s, τns)
+            @assert length(regions) == 1 # TODO
+            region = regions(1)
+            transform = transforms[region]
+            n = ns[region]
+            μ = μs[region]
+            μrot = μrots[region]
             R = transform.linear
             constrain_poly_equal.(model, f, R * f̄)
             for l in 1 : f_num_coeffs
@@ -195,7 +205,7 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory;
     end
 
     CentroidalTrajectoryProblem(model,
-        c_coeffs, f_coeffs, contacts, pieces, coords, coord2ds,
+        c_coeffs, f_coeffs, contacts, regions, pieces, coords, coord2ds,
         c_vars, f_vars, f̄_vars, r_vars, r̄_vars, τn_vars, Δts, z_vars,
         ns
     )
