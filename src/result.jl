@@ -2,6 +2,7 @@ struct CentroidalTrajectoryResult
     break_times
     center_of_mass
     contact_forces
+    contact_positions
     centers_of_pressure
     contact_normal_torques
 end
@@ -28,6 +29,13 @@ function CentroidalTrajectoryResult(problem::CentroidalTrajectoryProblem)
         Piecewise(subfunctions, break_times)
     end
 
+    # Contact positions
+    p_vals = map(val, problem.p_vars)
+    ps = map(contacts.val) do contact
+        subfunctions = [Constant([p_vals[pieces(i), contacts(contact), coords(k)] for k in coords.val]) for i in pieces.val]
+        Piecewise(subfunctions, break_times)
+    end
+
     # CoPs
     r_vals = map(val, problem.r_vars)
     rs = map(contacts.val) do contact
@@ -42,7 +50,7 @@ function CentroidalTrajectoryResult(problem::CentroidalTrajectoryProblem)
         Piecewise(subfunctions, break_times)
     end
 
-    CentroidalTrajectoryResult(break_times, c, fs, rs, τns)
+    CentroidalTrajectoryResult(break_times, c, fs, ps, rs, τns)
 end
 
 function solve!(problem::CentroidalTrajectoryProblem)

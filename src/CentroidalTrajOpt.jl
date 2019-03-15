@@ -28,7 +28,7 @@ using AxisArrays
 
 import QPControl
 
-using QPControl.Trajectories: BezierCurve, Piecewise, derivative, breaks
+using QPControl.Trajectories: BezierCurve, Piecewise, Constant, derivative, breaks
 using StaticUnivariatePolynomials: derivative
 
 const SUP = StaticUnivariatePolynomials
