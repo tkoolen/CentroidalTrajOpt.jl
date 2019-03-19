@@ -2,6 +2,7 @@ module CentroidalTrajOpt
 
 export
     CentroidalTrajectoryProblem,
+    ContactRegion,
     solve!,
     center_of_mass,
     normals
@@ -34,6 +35,7 @@ using StaticUnivariatePolynomials: derivative
 const SUP = StaticUnivariatePolynomials
 
 include("util.jl")
+include("region.jl")
 include("problem.jl")
 include("result.jl")
 

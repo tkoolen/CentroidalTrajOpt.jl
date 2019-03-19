@@ -37,7 +37,19 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory;
     c_num_coeffs = c_degree + 1
     f_num_coeffs = c_num_coeffs - 2
 
+    # Environment data. TODO: constructor arg.
     num_regions = 2
+    region_data = ContactRegion{Float64}[]
+    for i = 1 : num_regions
+        region = ContactRegion(
+            AffineMap(one(RotMatrix{3}), zero(SVector{3})),
+            0.7,
+            0.0,
+            Float64[1 0; 0 1; -1 0; 0 -1],
+            0.3 * ones(4)
+        )
+        push!(region_data, region)
+    end
 
     # Axes
     c_coeffs = Axis{:c_coeff}(1 : c_num_coeffs)
@@ -46,13 +58,6 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory;
     regions = Axis{:region}(1 : num_regions)
     pieces = Axis{:piece}(1 : num_pieces)
     coords = Axis{:coord}(SVector(:x, :y, :z))
-
-    # Environment data. TODO: rework, constructor args.
-    transforms = AxisArray(fill(AffineMap(one(RotMatrix{3}), zero(SVector{3})), num_regions), regions)
-    μs = AxisArray(fill(0.7, num_regions), regions)
-    μrots = AxisArray(fill(0.0, num_regions), regions)
-    As = AxisArray(fill([1 0; 0 1; -1 0; 0 -1], num_regions), regions)
-    bs = AxisArray(fill(0.3 * ones(4), num_regions), regions);
 
     # Time stuff
     Δt_tolerance = 0.05 # TODO: constructor arg
@@ -91,7 +96,7 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory;
     foreach(set_binary, z_vars)
 
     # Contact normals
-    Rs = map(transform -> transform.linear, transforms)
+    Rs = AxisArray(map(data -> data.transform.linear, region_data), regions)
     ns = map(R -> R[:, 3], Rs)
 
     # Continuous variables
@@ -107,7 +112,7 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory;
     #@variable model objval
     #@constraint model objval >= sum((c_vars[pieces(i), c_coeffs(l)] - c0) ⋅ (c_vars[pieces(i), c_coeffs(l)] - c0) for i in 1 : num_pieces, l in 1 : c_num_coeffs)
     #@objective model Min objval
-    
+
     cprev = nothing
     c′prev = nothing
 
@@ -118,7 +123,7 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory;
         c = [BezierCurve(c_vars[piece, coords(k)]...) for k in 1 : length(coords)]
         c′ = derivative.(c)
         c′′ = derivative.(c′)
-        
+
         # Contact/region assignment constraints
         for j in 1 : num_contacts
             # Each contact can be assigned to at most one region
@@ -186,9 +191,9 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory;
             p̄z = p̄[3]
             for m in 1 : num_regions
                 region = regions(m)
-                A = As[region]
-                b = bs[region]
-                transform = transforms[region]
+                A = region_data[m].A
+                b = region_data[m].b
+                transform = region_data[m].transform
                 z = z_vars[piece, contact, region]
 
                 # Contact position constraints
@@ -221,10 +226,10 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory;
             contact = contacts(j)
             for m in 1 : num_regions
                 region = regions(m)
-                n = ns[region]
-                μ = μs[region]
-                μrot = μrots[region]
+                μ = region_data[m].μ
+                μrot = region_data[m].μrot
                 R = Rs[region]
+                n = ns[region]
                 z = z_vars[piece, contact, region]
                 for l in 1 : f_num_coeffs
                     coeff = f_coeffs(l)
