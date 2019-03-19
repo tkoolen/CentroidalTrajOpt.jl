@@ -130,6 +130,13 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory;
             contact = contacts(j)
             @constraint model z_vars[piece, contact] in MOI.SOS1(collect(Float64, 1 : num_regions))
             #@constraint model sum(z_vars[piece, contact]) <= 1
+            if i > 1
+                # Each contact must be unassigned for one piece before it can be reassigned to a region.
+                Δ = @variable model [1 : num_regions] lower_bound=0 upper_bound=1
+                @constraint model Δ .>= z_vars[pieces(i - 1), contact] - z_vars[piece, contact]
+                @constraint model Δ .>= z_vars[piece, contact] - z_vars[pieces(i - 1), contact]
+                @constraint model sum(Δ) <= 1
+            end
         end
 
         # Initial conditions
