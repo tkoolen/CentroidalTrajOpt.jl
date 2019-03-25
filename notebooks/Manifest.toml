@@ -231,6 +231,12 @@ version = "0.4.0"
 [[Mmap]]
 uuid = "a63ad114-7e13-5084-954f-fe012c677804"
 
+[[MultilinearOpt]]
+deps = ["JuMP", "LinearAlgebra", "MathOptInterface", "PiecewiseLinearOpt", "Test"]
+path = "/home/twan/.julia/dev/MultilinearOpt"
+uuid = "f9bd3ce9-0f61-51c3-a66c-1e4651dca1d2"
+version = "0.0.0"
+
 [[NaNMath]]
 deps = ["Compat"]
 git-tree-sha1 = "ce3b85e484a5d4c71dd5316215069311135fa9f2"
@@ -248,6 +254,14 @@ deps = ["DocStringExtensions", "FunctionWrappers", "LinearAlgebra", "MacroTools"
 git-tree-sha1 = "c283893f6759e5448f5f5a5cc20b172f8a96196b"
 uuid = "41fac6d6-0ffa-5bcc-b863-17dd4947be41"
 version = "0.8.0"
+
+[[PiecewiseLinearOpt]]
+deps = ["JuMP", "LinearAlgebra", "MathOptInterface", "Random", "Test"]
+git-tree-sha1 = "6905563e6cc2b18f1abb326d73742480b6f1b6d7"
+repo-rev = "master"
+repo-url = "git@github.com:joehuchette/PiecewiseLinearOpt.jl.git"
+uuid = "0f51c51e-adfa-5141-8a04-d40246b8977c"
+version = "0.2.0+"
 
 [[Pkg]]
 deps = ["Dates", "LibGit2", "Markdown", "Printf", "REPL", "Random", "SHA", "UUIDs"]
