@@ -44,9 +44,17 @@ function constrain_poly_equal(model, x::Polynomial{N}, y::Number) where N
     constrain_poly_equal(model, x, Polynomial{N}(Polynomial(y)))
 end
 
-function axis_array_vars(model::Model, namefunc, axes...)
+function axis_array_vars(model::Model, namefunc, axes...; lower_bound=nothing, upper_bound=nothing)
     vars = map(Iterators.product(map(axis -> axis.val, axes)...)) do I
         @variable model base_name=namefunc(I...)
+    end
+    for var in vars
+        if lower_bound !== nothing
+            set_lower_bound(var, lower_bound)
+        end
+        if upper_bound !== nothing
+            set_upper_bound(var, upper_bound)
+        end
     end
     AxisArray(vars, axes...)
 end

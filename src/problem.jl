@@ -24,32 +24,21 @@ struct CentroidalTrajectoryProblem
     normals
 end
 
-function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory;
-        c0::AbstractVector,
-        ċ0::AbstractVector,
+function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
+        region_data::AbstractVector{<:ContactRegion},
+        c0::AbstractVector{<:Number},
+        ċ0::AbstractVector{<:Number},
+        contacts0::AbstractVector{<:Union{Pair{<:ContactRegion, <:AbstractVector}, Nothing}};
         c_degree = 3,
         num_pieces = 2,
-        num_contacts = 2, # TODO
         g = SVector(0.0, 0.0, -9.81),
         max_cop_distance = 0.1
     )
 
     c_num_coeffs = c_degree + 1
     f_num_coeffs = c_num_coeffs - 2
-
-    # Environment data. TODO: constructor arg.
-    num_regions = 2
-    region_data = ContactRegion{Float64}[]
-    for i = 1 : num_regions
-        region = ContactRegion(
-            AffineMap(one(RotMatrix{3}), zero(SVector{3})),
-            0.7,
-            0.0,
-            Float64[1 0; 0 1; -1 0; 0 -1],
-            0.3 * ones(4)
-        )
-        push!(region_data, region)
-    end
+    num_regions = length(region_data)
+    num_contacts = length(contacts0)
 
     # Axes
     c_coeffs = Axis{:c_coeff}(1 : c_num_coeffs)
@@ -71,8 +60,8 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory;
     # l: coefficient index
     # m: region index
 
-    Δts = AxisArray(fill(2.0, length(pieces)), pieces)
-    #Δts = nothing
+    # Δts = AxisArray(fill(2.0, length(pieces)), pieces)
+    Δts = nothing
     if Δts === nothing
         Δts = axis_array_vars(model, i -> "Δt[$i]", pieces)
         Δtsqs = axis_array_vars(model, i -> "Δtsq[$i]", pieces)
@@ -85,7 +74,7 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory;
             set_upper_bound(Δtsq, Δtmax^2)
             @constraint model Δtsq == Δt^2
         end
-        @objective model Min sum(Δts)
+        # @objective model Min sum(Δts)
     else
         Δtsqs = map(x -> x^2, Δts)
     end
@@ -100,14 +89,22 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory;
     ns = map(R -> R[:, 3], Rs)
 
     # Continuous variables
-    c_vars = axis_array_vars(model, (i, k, l) -> "C[p$i, $k, $l]", pieces, coords, c_coeffs)
-    f_vars = axis_array_vars(model, (i, j, k, l) -> "F[p$i, c$j, $k, $l]", pieces, contacts, coords, f_coeffs)
-    f̄_vars = axis_array_vars(model, (i, j, k, l, m) -> "F̄[p$i, c$j, $k, $l, r$m]", pieces, contacts, coords, f_coeffs, regions)
-    p_vars = axis_array_vars(model, (i, j, k) -> "P[p$i, c$j, $k]", pieces, contacts, coords)
-    p̄_vars = axis_array_vars(model, (i, j, k) -> "P̄[p$i, c$j, $k]", pieces, contacts, coords)
-    r_vars = axis_array_vars(model, (i, j, k, l) -> "R[p$i, c$j, $k, $l]", pieces, contacts, coords, c_coeffs)
-    r̄_vars = axis_array_vars(model, (i, j, k, l) -> "R̄[p$i, c$j, $k, $l]", pieces, contacts, coords, c_coeffs)
-    τn_vars = axis_array_vars(model, (i, j, l) -> "Tn[p$i, c$j, $l]", pieces, contacts, f_coeffs)
+    c_vars = axis_array_vars(model, (i, k, l) -> "C[p$i, $k, $l]",pieces, coords, c_coeffs;
+        lower_bound=-2, upper_bound=2)
+    f_vars = axis_array_vars(model, (i, j, k, l) -> "F[p$i, c$j, $k, $l]", pieces, contacts, coords, f_coeffs;
+        lower_bound=-10 * norm(g), upper_bound=10 * norm(g))
+    f̄_vars = axis_array_vars(model, (i, j, k, l, m) -> "F̄[p$i, c$j, $k, $l, r$m]", pieces, contacts, coords, f_coeffs, regions;
+        lower_bound=-10 * norm(g), upper_bound=10 * norm(g))
+    p_vars = axis_array_vars(model, (i, j, k) -> "P[p$i, c$j, $k]", pieces, contacts, coords;
+        lower_bound=-5, upper_bound=5)
+    p̄_vars = axis_array_vars(model, (i, j, k) -> "P̄[p$i, c$j, $k]", pieces, contacts, coords;
+        lower_bound=-1, upper_bound=1)
+    r_vars = axis_array_vars(model, (i, j, k, l) -> "R[p$i, c$j, $k, $l]", pieces, contacts, coords, c_coeffs;
+        lower_bound=-5, upper_bound=5)
+    r̄_vars = axis_array_vars(model, (i, j, k, l) -> "R̄[p$i, c$j, $k, $l]", pieces, contacts, coords, c_coeffs;
+        lower_bound=-1, upper_bound=1)
+    τn_vars = axis_array_vars(model, (i, j, l) -> "Tn[p$i, c$j, $l]", pieces, contacts, f_coeffs;
+        lower_bound=-1 * norm(g), upper_bound=1 * norm(g))
 
     #@variable model objval
     #@constraint model objval >= sum((c_vars[pieces(i), c_coeffs(l)] - c0) ⋅ (c_vars[pieces(i), c_coeffs(l)] - c0) for i in 1 : num_pieces, l in 1 : c_num_coeffs)
@@ -130,6 +127,17 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory;
             contact = contacts(j)
             @constraint model z_vars[piece, contact] in MOI.SOS1(collect(Float64, 1 : num_regions))
             #@constraint model sum(z_vars[piece, contact]) <= 1
+            if i == 1
+                # Initial contact assignment.
+                if contacts0[j] === nothing
+                    @constraint model sum(z_vars[piece, contact]) == 0
+                else
+                    region_data0, p0 = contacts0[j]
+                    m = findfirst(isequal(region_data0), region_data)
+                    fix(z_vars[piece, contact, regions(m)], 1, force=true)
+                    fix.(p_vars[piece, contact], p0, force=true)
+                end
+            end
             if i > 1
                 # Each contact must be unassigned for one piece before it can be reassigned to a region.
                 # Let Δzᵢ,ⱼ,ₘ = zᵢ,ⱼ,ₘ - zᵢ₋₁,ⱼ,ₘ. Then there are three cases for ∑ₘ |Δzᵢ,ⱼ,ₘ|:
@@ -144,8 +152,10 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory;
                 # Contact position p may only change when the contact is not assigned to a region,
                 # i.e., when ∑ₘ zᵢ,ⱼ,ₘ = 0.
                 Δp = p_vars[piece, contact] - p_vars[pieces(i - 1), contact]
-                Δpmax = 0.5 # TODO
+                Δpmax = 1.0 # TODO
                 @constraint model sum(x -> x^2, Δp) <= (1 - sum(z_vars[piece, contact])) * Δpmax^2
+                # @constraint model  Δp .<= (1 - sum(z_vars[piece, contact])) * Δpmax
+                # @constraint model -Δp .<= (1 - sum(z_vars[piece, contact])) * Δpmax
             end
         end
 
@@ -153,16 +163,6 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory;
         if i == 1
             @constraint model map(x -> x(0), c) .== c0
             @constraint model map(x -> x(0), c′) .== ċ0 .* Δts[i]
-        end
-
-        if i == 1
-            for j in 1 : num_contacts
-                contact = contacts(j)
-                initial_region = regions(1) # TODO: make configurable
-                @constraint model z_vars[piece, contact, initial_region] == 1
-
-                # TODO: initial contact position constraint
-            end
         end
 
         # Final conditions

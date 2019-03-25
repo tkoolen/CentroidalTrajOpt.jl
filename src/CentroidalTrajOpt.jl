@@ -10,6 +10,8 @@ export
 # Re-exports from other packages
 export
     SVector,
+    RotMatrix,
+    AffineMap,
     with_optimizer,
     derivative,
     breaks
