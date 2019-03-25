@@ -132,10 +132,20 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory;
             #@constraint model sum(z_vars[piece, contact]) <= 1
             if i > 1
                 # Each contact must be unassigned for one piece before it can be reassigned to a region.
-                Δ = @variable model [1 : num_regions] lower_bound=0 upper_bound=1
-                @constraint model Δ .>= z_vars[pieces(i - 1), contact] - z_vars[piece, contact]
-                @constraint model Δ .>= z_vars[piece, contact] - z_vars[pieces(i - 1), contact]
-                @constraint model sum(Δ) <= 1
+                # Let Δzᵢ,ⱼ,ₘ = zᵢ,ⱼ,ₘ - zᵢ₋₁,ⱼ,ₘ. Then there are three cases for ∑ₘ |Δzᵢ,ⱼ,ₘ|:
+                # 1) ∑ₘ |Δzᵢ,ⱼ,ₘ| = 0: the assignment during piece i is the same as the assignment during piece i - 1
+                # 2) ∑ₘ |Δzᵢ,ⱼ,ₘ| = 1: unassigned during piece i and assigned during piece i - 1 or vice versa
+                # 3) ∑ₘ |Δzᵢ,ⱼ,ₘ| = 2: different assignment during piece i and piece i - 1
+                # The third case must be prevented, so we want ∑ₘ |Δzᵢ,ⱼ,ₘ| ≤ 1.
+                # This is an ℓ₁-norm constraint.
+                Δz = z_vars[piece, contact] - z_vars[pieces(i - 1), contact]
+                constrain_l1_norm(model, Δz, 1; add_bounds=true)
+
+                # Contact position p may only change when the contact is not assigned to a region,
+                # i.e., when ∑ₘ zᵢ,ⱼ,ₘ = 0.
+                Δp = p_vars[piece, contact] - p_vars[pieces(i - 1), contact]
+                Δpmax = 0.5 # TODO
+                @constraint model sum(x -> x^2, Δp) <= (1 - sum(z_vars[piece, contact])) * Δpmax^2
             end
         end
 
@@ -220,8 +230,7 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory;
                     @constraint model  r̄z <= Mr * (1 - z)
                     @constraint model -r̄z <= Mr * (1 - z)
                     @constraint model r .== transform(r̄)
-                    Δ = r̄ - p̄
-                    @constraint model Δ ⋅ Δ <= max_cop_distance^2
+                    @constraint model sum(x -> x^2, r̄ - p̄) <= max_cop_distance^2
                 end
             end
         end
@@ -268,9 +277,8 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory;
             p = p_vars[piece, contact]
             for l in 1 : c_num_coeffs
                 cpoint = map(x -> x.points[l], c)
-                Δ = cpoint - p
-                @constraint model Δ ⋅ Δ <= 1.5 # TODO
-                @constraint model Δ[3] >= 0.6 # TODO
+                @constraint model sum(x -> x^2, cpoint - p) <= 1.5 # TODO
+                @constraint model cpoint[3] - p[3] >= 0.6 # TODO
             end
         end
 

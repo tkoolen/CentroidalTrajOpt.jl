@@ -51,6 +51,15 @@ function axis_array_vars(model::Model, namefunc, axes...)
     AxisArray(vars, axes...)
 end
 
+function constrain_l1_norm(model::JuMP.Model, x::AbstractVector{<:JuMP.AbstractJuMPScalar}, value; add_bounds)
+    @assert add_bounds
+    s = @variable model [1 : length(x)] lower_bound=0 upper_bound=value
+    @constraint model s .>=  x
+    @constraint model s .>= -x
+    @constraint model sum(s) <= value
+    model
+end
+
 # scrap
 # function poly(model::JuMP.Model, namefunc, degree::Union{Integer, Val})
 #     Polynomial(ntuple(j -> @variable(model, base_name=namefunc(j)), degree + 1))
