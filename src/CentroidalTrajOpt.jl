@@ -21,6 +21,12 @@ export
     map_subfunctions,
     map_elements
 
+# Visualization
+export
+    CentroidalTrajectoryVisualizer,
+    set_objects!,
+    set_state!
+
 using JuMP
 using LinearAlgebra
 using StaticArrays
@@ -40,5 +46,13 @@ include("util.jl")
 include("region.jl")
 include("problem.jl")
 include("result.jl")
+
+using GeometryTypes: HyperSphere, Point, Vec
+import MeshCat
+using MeshCat: AbstractVisualizer, ArrowVisualizer, HyperSphere, RGB
+using MeshCat: MeshLambertMaterial, Texture, PngImage
+using MeshCat: setobject!, settransform!
+
+include("visualization.jl")
 
 end # module

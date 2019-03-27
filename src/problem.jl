@@ -60,14 +60,14 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
     # l: coefficient index
     # m: region index
 
-    # Δts = AxisArray(fill(2.0, length(pieces)), pieces)
+    # Δts = AxisArray(fill(0.4, length(pieces)), pieces)
     Δts = nothing
     if Δts === nothing
         Δts = axis_array_vars(model, i -> "Δt[$i]", pieces)
         Δtsqs = axis_array_vars(model, i -> "Δtsq[$i]", pieces)
         for (Δt, Δtsq) in zip(Δts, Δtsqs)
-            Δtmin = 0.5
-            Δtmax = 5.0 # TODO
+            Δtmin = 0.3
+            Δtmax = 2.0 # TODO
             set_lower_bound(Δt, Δtmin)
             set_upper_bound(Δt, Δtmax)
             set_lower_bound(Δtsq, Δtmin^2)
@@ -153,9 +153,9 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
                 # i.e., when ∑ₘ zᵢ,ⱼ,ₘ = 0.
                 Δp = p_vars[piece, contact] - p_vars[pieces(i - 1), contact]
                 Δpmax = 1.0 # TODO
-                @constraint model sum(x -> x^2, Δp) <= (1 - sum(z_vars[piece, contact])) * Δpmax^2
-                # @constraint model  Δp .<= (1 - sum(z_vars[piece, contact])) * Δpmax
-                # @constraint model -Δp .<= (1 - sum(z_vars[piece, contact])) * Δpmax
+                # @constraint model sum(x -> x^2, Δp) <= (1 - sum(z_vars[piece, contact])) * Δpmax^2
+                @constraint model  Δp .<= (1 - sum(z_vars[piece, contact])) * Δpmax
+                @constraint model -Δp .<= (1 - sum(z_vars[piece, contact])) * Δpmax
             end
         end
 
@@ -167,7 +167,7 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
 
         # Final conditions
         if i == num_pieces
-            @constraint model map(x -> x(1), c) .== c0 # TODO
+            # @constraint model map(x -> x(1), c) .== c0 # TODO
             @constraint model map(x -> x(1), c′) .== 0
             @constraint model map(x -> x(1), c′′) .== 0
         end
