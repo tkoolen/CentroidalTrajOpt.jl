@@ -1,5 +1,11 @@
 # This file is machine-generated - editing it directly is not advised
 
+[[AmplNLWriter]]
+deps = ["Compat", "MathOptInterface", "MathProgBase", "Test"]
+git-tree-sha1 = "b4732793f7c7c481cf0033f36e2bf5e2b89d88f1"
+uuid = "7c4d4715-977e-5154-bfe0-e096adeac482"
+version = "0.5.0"
+
 [[AssetRegistry]]
 deps = ["Distributed", "JSON", "Pidfile", "SHA", "Test"]
 git-tree-sha1 = "b25e88db7944f98789130d7b503276bc34bc098e"
