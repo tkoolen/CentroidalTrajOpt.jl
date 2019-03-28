@@ -60,7 +60,7 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
     # l: coefficient index
     # m: region index
 
-    # Δts = AxisArray(fill(0.35, length(pieces)), pieces)
+    # Δts = AxisArray(fill(0.4, length(pieces)), pieces)
     Δts = nothing
     if Δts === nothing
         Δts = axis_array_vars(model, i -> "Δt[$i]", pieces)
@@ -97,11 +97,11 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
         lower_bound=-3 * norm(g), upper_bound=3 * norm(g))
     p_vars = axis_array_vars(model, (i, j, k) -> "P[p$i, c$j, $k]", pieces, contacts, coords;
         lower_bound=-3, upper_bound=3)
-    p̄_vars = axis_array_vars(model, (i, j, k) -> "P̄[p$i, c$j, $k]", pieces, contacts, coords;
+    p̄_vars = axis_array_vars(model, (i, j, k, m) -> "P̄[p$i, c$j, $k, r$m]", pieces, contacts, coords, regions;
         lower_bound=-1, upper_bound=1)
     r_vars = axis_array_vars(model, (i, j, k, l) -> "R[p$i, c$j, $k, $l]", pieces, contacts, coords, c_coeffs;
         lower_bound=-3, upper_bound=3)
-    r̄_vars = axis_array_vars(model, (i, j, k, l) -> "R̄[p$i, c$j, $k, $l]", pieces, contacts, coords, c_coeffs;
+    r̄_vars = axis_array_vars(model, (i, j, k, l, m) -> "R̄[p$i, c$j, $k, $l, r$m]", pieces, contacts, coords, c_coeffs, regions;
         lower_bound=-1, upper_bound=1)
     τn_vars = axis_array_vars(model, (i, j, l) -> "Tn[p$i, c$j, $l]", pieces, contacts, f_coeffs;
         lower_bound=-1 * norm(g), upper_bound=1 * norm(g))
@@ -193,8 +193,10 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
         constrain_poly_equal.(model, c′′, identity((g + ftot) .* Δtsqs[i]))
 
         # Torque balance
-        τ = sum(Polynomial.(rs[j]) × Polynomial.(fs[j]) for j = 1 : num_contacts) +
-            sum(Polynomial.(sum(ns[regions(m)] .* z_vars[piece, regions(m), contacts(j)] for m in 1 : num_regions) .* τns[j]) for j = 1 : num_contacts) -
+        # τ = sum(Polynomial.(rs[j]) × Polynomial.(fs[j]) for j = 1 : num_contacts) +
+        #     sum(Polynomial.(sum(ns[regions(m)] .* z_vars[piece, regions(m), contacts(j)] for m in 1 : num_regions) .* τns[j]) for j = 1 : num_contacts) -
+        #     Polynomial.(c) × Polynomial.(ftot)
+        τ = sum(Polynomial.(rs[j]) × Polynomial.(fs[j]) for j = 1 : num_contacts) -
             Polynomial.(c) × Polynomial.(ftot)
         τ = map(x -> Polynomial(simplify.(model, x.coeffs)), τ)
         constrain_poly_equal.(model, τ, 0)
@@ -204,11 +206,11 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
         for j in 1 : num_contacts
             contact = contacts(j)
             p = p_vars[piece, contact]
-            p̄ = p̄_vars[piece, contact]
-            p̄xy = p̄[1 : 2]
-            p̄z = p̄[3]
             for m in 1 : num_regions
                 region = regions(m)
+                p̄ = p̄_vars[piece, contact, region]
+                p̄xy = p̄[1 : 2]
+                p̄z = p̄[3]
                 A = region_data[m].A
                 b = region_data[m].b
                 transform = region_data[m].transform
@@ -224,7 +226,7 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
                 for l = 1 : c_num_coeffs
                     coeff = c_coeffs(l)
                     r = r_vars[piece, contact, coeff]
-                    r̄ = r̄_vars[piece, contact, coeff]
+                    r̄ = r̄_vars[piece, contact, coeff, region]
                     r̄xy = r̄[1 : 2]
                     r̄z = r̄[3]
                     @constraint model A * r̄xy .<= b + Mr * (1 - z)
