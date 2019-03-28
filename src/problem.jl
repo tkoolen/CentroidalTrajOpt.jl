@@ -8,6 +8,7 @@ struct CentroidalTrajectoryProblem
     regions
     pieces
     coords
+    coords2d
 
     # Variables
     c_vars
@@ -16,7 +17,7 @@ struct CentroidalTrajectoryProblem
     p_vars
     r_vars
     r̄_vars
-    τn_vars
+    # τn_vars
     Δts
     z_vars
 
@@ -47,6 +48,7 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
     regions = Axis{:region}(1 : num_regions)
     pieces = Axis{:piece}(1 : num_pieces)
     coords = Axis{:coord}(SVector(:x, :y, :z))
+    coords2d = Axis{:coord}(SVector(:x, :y))
 
     # Time stuff
     Δt_tolerance = 0.05 # TODO: constructor arg
@@ -60,14 +62,14 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
     # l: coefficient index
     # m: region index
 
-    # Δts = AxisArray(fill(0.4, length(pieces)), pieces)
+    # Δts = AxisArray(fill(0.3, length(pieces)), pieces)
     Δts = nothing
     if Δts === nothing
         Δts = axis_array_vars(model, i -> "Δt[$i]", pieces)
         Δtsqs = axis_array_vars(model, i -> "Δtsq[$i]", pieces)
         for (Δt, Δtsq) in zip(Δts, Δtsqs)
             Δtmin = 0.3
-            Δtmax = 2.0 # TODO
+            Δtmax = 1.0 # TODO
             set_lower_bound(Δt, Δtmin)
             set_upper_bound(Δt, Δtmax)
             set_lower_bound(Δtsq, Δtmin^2)
@@ -96,15 +98,15 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
     f̄_vars = axis_array_vars(model, (i, j, k, l, m) -> "F̄[p$i, c$j, $k, $l, r$m]", pieces, contacts, coords, f_coeffs, regions;
         lower_bound=-3 * norm(g), upper_bound=3 * norm(g))
     p_vars = axis_array_vars(model, (i, j, k) -> "P[p$i, c$j, $k]", pieces, contacts, coords;
-        lower_bound=-3, upper_bound=3)
-    p̄_vars = axis_array_vars(model, (i, j, k, m) -> "P̄[p$i, c$j, $k, r$m]", pieces, contacts, coords, regions;
+        lower_bound=-2, upper_bound=2)
+    p̄_vars = axis_array_vars(model, (i, j, k, m) -> "P̄[p$i, c$j, $k, r$m]", pieces, contacts, coords2d, regions;
         lower_bound=-1, upper_bound=1)
     r_vars = axis_array_vars(model, (i, j, k, l) -> "R[p$i, c$j, $k, $l]", pieces, contacts, coords, c_coeffs;
-        lower_bound=-3, upper_bound=3)
-    r̄_vars = axis_array_vars(model, (i, j, k, l, m) -> "R̄[p$i, c$j, $k, $l, r$m]", pieces, contacts, coords, c_coeffs, regions;
+        lower_bound=-2, upper_bound=2)
+    r̄_vars = axis_array_vars(model, (i, j, k, l, m) -> "R̄[p$i, c$j, $k, $l, r$m]", pieces, contacts, coords2d, c_coeffs, regions;
         lower_bound=-1, upper_bound=1)
-    τn_vars = axis_array_vars(model, (i, j, l) -> "Tn[p$i, c$j, $l]", pieces, contacts, f_coeffs;
-        lower_bound=-1 * norm(g), upper_bound=1 * norm(g))
+    # τn_vars = axis_array_vars(model, (i, j, l) -> "Tn[p$i, c$j, $l]", pieces, contacts, f_coeffs;
+    #     lower_bound=-1 * norm(g), upper_bound=1 * norm(g))
 
     #@variable model objval
     #@constraint model objval >= sum((c_vars[pieces(i), c_coeffs(l)] - c0) ⋅ (c_vars[pieces(i), c_coeffs(l)] - c0) for i in 1 : num_pieces, l in 1 : c_num_coeffs)
@@ -186,7 +188,7 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
         rs = [[BezierCurve(r_vars[piece, contacts(j), coords(k)]...) for k in coords.val] for j in contacts.val]
 
         # Normal torques (global)
-        τns = [BezierCurve(τn_vars[piece, contacts(j)]...) for j in contacts.val]
+        # τns = [BezierCurve(τn_vars[piece, contacts(j)]...) for j in contacts.val]
 
         # Dynamics
         ftot = sum(fs)
@@ -202,41 +204,37 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
         constrain_poly_equal.(model, τ, 0)
 
         # CoP and contact position constraints
-        Mr = 3 # TODO
+        Mr = 2 # TODO
         for j in 1 : num_contacts
             contact = contacts(j)
             p = p_vars[piece, contact]
             for m in 1 : num_regions
                 region = regions(m)
                 p̄ = p̄_vars[piece, contact, region]
-                p̄xy = p̄[1 : 2]
-                p̄z = p̄[3]
                 A = region_data[m].A
                 b = region_data[m].b
                 transform = region_data[m].transform
                 z = z_vars[piece, contact, region]
 
                 # Contact position constraints
-                @constraint model A * p̄xy .<= b + Mr * (1 - z)
-                @constraint model  p̄z <= Mr * (1 - z)
-                @constraint model -p̄z <= Mr * (1 - z)
-                @constraint model p .== transform(p̄)
+                @constraint model A * p̄ .<= b
+                @constraint model  (p - transform([p̄; 0])) .<= Mr * (1 - z)
+                @constraint model -(p - transform([p̄; 0])) .<= Mr * (1 - z)
 
                 # CoP constraints
                 for l = 1 : c_num_coeffs
                     coeff = c_coeffs(l)
                     r = r_vars[piece, contact, coeff]
                     r̄ = r̄_vars[piece, contact, coeff, region]
-                    r̄xy = r̄[1 : 2]
-                    r̄z = r̄[3]
-                    @constraint model A * r̄xy .<= b + Mr * (1 - z)
-                    @constraint model  r̄z <= Mr * (1 - z)
-                    @constraint model -r̄z <= Mr * (1 - z)
-                    @constraint model r .== transform(r̄)
+                    @constraint model A * r̄ .<= b
+                    @constraint model  (r - transform([r̄; 0])) .<= Mr * (1 - z)
+                    @constraint model -(r - transform([r̄; 0])) .<= Mr * (1 - z)
                     if max_cop_distance == 0
-                        @constraint model r̄ .== p̄
+                        @constraint model r .== p
                     else
-                        @constraint model sum(x -> x^2, r̄ - p̄) <= max_cop_distance^2
+                        # @constraint model sum(x -> x^2, r - p) <= max_cop_distance^2
+                        @constraint model  (r - p) .<= max_cop_distance
+                        @constraint model -(r - p) .<= max_cop_distance
                     end
                 end
             end
@@ -260,20 +258,21 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
                     f̄xy = f̄[1 : 2]
                     f̄z = f̄[3]
                     set_lower_bound(f̄z, 0)
-                    @constraint model f̄z <= Mf * z
-                    μf̄z = @variable model lower_bound=0 # needed for SecondOrderCone constraint
+                    # auxiliary variable needed for SecondOrderCone constraint:
+                    μf̄z = @variable model lower_bound=0 upper_bound=μ * upper_bound(f̄z)
                     @constraint model μf̄z == μ * f̄z
+                    @constraint model μf̄z <= Mf * μ * z
                     @constraint model [μf̄z; f̄xy] in SecondOrderCone()
-                    @constraint model f̄xy ⋅ f̄xy <= μf̄z^2
+                    # @constraint model f̄xy ⋅ f̄xy <= μf̄z^2
                     # TODO: use a SOS condition?
                     # TODO: crude model
-                    τn = τn_vars[piece, contact, coeff]
-                    if μrot == 0
-                        fix(τn, 0, force=true)
-                    else
-                        @constraint model  τn <= μrot * f̄z + Mτ * z
-                        @constraint model -τn <= μrot * f̄z + Mτ * z
-                    end
+                    # τn = τn_vars[piece, contact, coeff]
+                    # if μrot == 0
+                    #     fix(τn, 0, force=true)
+                    # else
+                    #     @constraint model  τn <= μrot * f̄z + Mτ * z
+                    #     @constraint model -τn <= μrot * f̄z + Mτ * z
+                    # end
                 end
             end
             for l in 1 : f_num_coeffs
@@ -288,10 +287,10 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
             p = p_vars[piece, contact]
             for l in 1 : c_num_coeffs
                 cpoint = map(x -> x.points[l], c)
-                # @constraint model cpoint - p .<= 1.5
-                # @constraint model p - cpoint .<= 1.5
-                @constraint model sum(x -> x^2, cpoint - p) <= 1.5 # TODO
+                @constraint model cpoint - p .<= 1.5
+                @constraint model p - cpoint .<= 1.5
                 @constraint model cpoint[3] - p[3] >= 0.6 # TODO
+                # @constraint model sum(x -> x^2, cpoint - p) <= 1.5 # TODO
             end
         end
 
@@ -300,8 +299,8 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
     end
 
     CentroidalTrajectoryProblem(model,
-        c_coeffs, f_coeffs, contacts, regions, pieces, coords,
-        c_vars, f_vars, f̄_vars, p_vars, r_vars, r̄_vars, τn_vars, Δts, z_vars,
+        c_coeffs, f_coeffs, contacts, regions, pieces, coords, coords2d,
+        c_vars, f_vars, f̄_vars, p_vars, r_vars, r̄_vars, #=τn_vars,=# Δts, z_vars,
         ns
     )
 end
