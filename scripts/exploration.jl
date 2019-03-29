@@ -1,13 +1,3 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[3]:
-
-
-using Pkg
-Pkg.activate(@__DIR__)
-
-
 # To do:
 #
 # * Test that CoPs are in region
@@ -16,100 +6,81 @@ Pkg.activate(@__DIR__)
 # * better CoM kinematic constraints
 # * Initial condition modification
 
-# In[4]:
-
-
 using CentroidalTrajOpt
 using LinearAlgebra
+using AmplNLWriter
+using Ipopt
 using SCIP
 using JuMP
 
-
-# In[5]:
-
-
 # Environment setup
-num_regions = 1#2
 region_data = ContactRegion{Float64}[]
-for i = 1 : num_regions
-    region = ContactRegion(
+push!(region_data, ContactRegion(
         AffineMap(one(RotMatrix{3}), zero(SVector{3})),
-        0.7,
+        1.0,
         0.0,
         Float64[1 0; 0 1; -1 0; 0 -1],
-        5.0 * ones(4)
-    )
-    push!(region_data, region)
-end
+        0.2 * ones(4)
+))
 
-
-# In[6]:
-
+push!(region_data, ContactRegion(
+        AffineMap(one(RotMatrix{3}), SVector(1.0, 0.0, 0.2)),
+        1.0,
+        0.0,
+        Float64[1 0; 0 1; -1 0; 0 -1],
+        0.4 * ones(4)
+))
 
 # Initial conditions
 c0 = SVector(-0.05, 0.05, 0.9)
-ċ0 = SVector(0.9, 0.1, 0.1)
+ċ0 = SVector(0.6, 0.1, -0.1)
 contacts0 = [
     region_data[1] => SVector(0.0, 0.15, 0.0),
-    region_data[1] => SVector(0.0, -0.15, 0.0),
+    nothing# region_data[1] => SVector(0.0, -0.15, 0.0),
 ];
-
-
-# In[7]:
-
 
 # Additional settings
 g = SVector(0.0, 0.0, -9.81);
-max_cop_distance = 0.1
+max_cop_distance = 0.07
 
-
-# In[11]:
-
-
-optimizer_factory = with_optimizer(SCIP.Optimizer, limits_gap=0.05, limits_time=300, display_verblevel=5,
-    display_width=120, history_valuebased=true);
+optimizer_factory = with_optimizer(SCIP.Optimizer, limits_gap=0.05, limits_time=10 * 60 * 60, display_verblevel=5,
+    display_width=120, history_valuebased=true, lp_threads=10)#, branching_preferbinary=true)#, nlp_solver="ipopt", heuristics_nlpdiving_priority=536870911)#,;
+# optimizer_factory = with_optimizer(AmplNLWriter.Optimizer, "/home/twan/code/bonmin/Bonmin-1.8.7/build/bin/bonmin")
 # display_lpinfo=true
 # optimizer_factory = with_optimizer(Ipopt.Optimizer)
-
-
-# In[12]:
-
 
 problem = CentroidalTrajectoryProblem(optimizer_factory, region_data, c0, ċ0, contacts0;
     g=g, max_cop_distance=max_cop_distance, num_pieces=5, c_degree=3);
 
+# fix.(problem.z_vars[:, :, 1], [1.0 1.0; 0.0 0.0; 0.0 0.0])
+# fix.(problem.z_vars[:, :, 2], [0.0 0.0; -0.0 -0.0; 1.0 1.0])
 
-# In[13]:
+SCIP.SCIPsetEmphasis(problem.model.moi_backend.optimizer.model.mscip, SCIP.SCIP_PARAMEMPHASIS_FEASIBILITY, true);
 
-
+## Feasibility
 result = solve!(problem);
 
-
-# In[74]:
-
-
-# set_objective(problem.model, MOI.MAX_SENSE, sum(problem.z_vars))
-# result = solve!(problem);
-
-
-# In[75]:
+## Optimality
+# SCIP.SCIPprintStatistics(problem.model.moi_backend.optimizer.model.mscip, Libc.FILE(RawFD(1), "w"))
+# SCIP.SCIPprintHeuristicStatistics(problem.model.moi_backend.optimizer.model.mscip, Libc.FILE(RawFD(1), "w"))
+# SCIP.SCIPprintBuildOptions(problem.model.moi_backend.optimizer.model.mscip, Libc.FILE(RawFD(1), "w"))
 
 
 # Setting objective function straight away somehow prevents SCIP from finding a feasible point, so:
+# SCIP.SCIPsetEmphasis(problem.model.moi_backend.optimizer.model.mscip, SCIP.SCIP_PARAMEMPHASIS_OPTIMALITY, true);
+# set_objective(problem.model, MOI.MAX_SENSE, sum(problem.z_vars))
+# result = solve!(problem);
 # set_objective(problem.model, MOI.MIN_SENSE, sum(problem.Δts))
 # result = solve!(problem);
 
-
-# In[76]:
-
-
+## Tests
 using Test
 c = result.center_of_mass
 ċ = map_subfunctions(x -> map_elements(derivative, x), c)
 c̈ = map_subfunctions(x -> map_elements(derivative, x), ċ)
 rs = result.centers_of_pressure
 fs = result.contact_forces
-τns = result.contact_normal_torques
+# τns = result.contact_normal_torques
 ps = result.contact_positions
 ns = normals(problem)
 
@@ -133,7 +104,9 @@ for t in range(0, T, length=100)
 
     # Torque about CoM
     n = ns[problem.regions(1)]
-    τ = sum((rs[j](t) - c(t)) × fs[j](t) + n * τns[j](t) for j in problem.contacts.val)
+    # τ = sum((rs[j](t) - c(t)) × fs[j](t) + n * τns[j](t) for j in problem.contacts.val)
+    τ = sum((rs[j](t) - c(t)) × fs[j](t) for j in problem.contacts.val)
+
     @test τ ≈ zeros(3) atol=1e-4
 
     # Friction cones
@@ -143,13 +116,13 @@ for t in range(0, T, length=100)
         region = findfirst(isequal(1), zs)
 
         f = fs[j]
-        τn = τns[j]
+        # τn = τns[j]
         p = ps[j]
         r = rs[j]
 
         f_t = f(t)
         fn_t = f_t ⋅ n
-        τn_t = τn(t)
+        # τn_t = τn(t)
 
         @test fn_t >= 0
         @test norm(p(t) - r(t)) < max_cop_distance + 1e-5
@@ -161,7 +134,7 @@ for t in range(0, T, length=100)
 
         if region == nothing
             @test f_t ≈ zero(f_t) atol=1e-4
-            @test τn_t ≈ zero(τn_t) atol=1e-4
+            # @test τn_t ≈ zero(τn_t) atol=1e-4
         end
     end
 end
@@ -172,60 +145,27 @@ for t in result.break_times
     @test ċ(t - 1e-8) ≈ ċ(t + 1e-8) atol=1e-5
 end
 
-
-# In[77]:
-
-
-objective_value(problem.model)
-
-
-# In[78]:
-
-
-# using Plots
-
-
-# In[79]:
-
-
-# gr()
-# tvals = range(0, T; length=100)
-# cvals = [c(t) for t in tvals]
-# rvals = [[rs[j](t) for t in tvals] for j in problem.contacts.val]
-# ftotvals = [sum(fs[j](t) for j in problem.contacts.val) for t in tvals]
-# plt = plot(getindex.(cvals, 1), getindex.(cvals, 2), getindex.(cvals, 3), label="CoM",
-#     xlims=[-0.2, 0.2], ylims=[-0.2, 0.2], zlims=[0, 1.2], aspect_ratio=1)
-# for j in problem.contacts.val
-#     plot!(plt, getindex.(rvals[j], 1), getindex.(rvals[j], 2), getindex.(rvals[j], 3), label="CoP $j")
-# end
-# plt
-
-
-# In[80]:
-
-
+## Visualization
 using MeshCat
 using LoopThrottle
 newvis = false
-if newvis || (!@isdefined vis) || (!@isdefined cvis)
+if newvis || (!@isdefined vis) || isempty(vis.core.scope.pool.connections)
     vis = Visualizer()
-    cvis = CentroidalTrajectoryVisualizer(vis, g, length(contacts0))
-    set_objects!(cvis)
     open(vis)
+    wait(vis)
 end
 
-
-# In[81]:
-
+cvis = CentroidalTrajectoryVisualizer(vis, region_data, g, length(contacts0))
+set_objects!(cvis)
 
 let
     T = last(result.break_times)
-#     max_rate = 0.3
-    max_rate = 1
+    max_rate = 0.3
+    # max_rate = 1
     @throttle t for t in range(0, T, length = round(Int, 60 * T / max_rate))
         set_state!(cvis, result, t)
     end max_rate=max_rate
 end
 
-
-# In[ ]:
+## Mode sequence
+value.(problem.z_vars)

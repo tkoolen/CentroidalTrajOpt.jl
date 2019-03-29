@@ -52,6 +52,7 @@ import MeshCat
 using MeshCat: AbstractVisualizer, ArrowVisualizer, HyperSphere, RGB
 using MeshCat: MeshLambertMaterial, Texture, PngImage
 using MeshCat: setobject!, settransform!
+using Polyhedra: hrep, polyhedron, Mesh
 
 include("visualization.jl")
 

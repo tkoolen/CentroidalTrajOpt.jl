@@ -232,9 +232,9 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
                     if max_cop_distance == 0
                         @constraint model r .== p
                     else
-                        # @constraint model sum(x -> x^2, r - p) <= max_cop_distance^2
-                        @constraint model  (r - p) .<= max_cop_distance
-                        @constraint model -(r - p) .<= max_cop_distance
+                        @constraint model sum(x -> x^2, r - p) <= max_cop_distance^2
+                        # @constraint model  (r - p) .<= max_cop_distance
+                        # @constraint model -(r - p) .<= max_cop_distance
                     end
                 end
             end
@@ -287,10 +287,10 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
             p = p_vars[piece, contact]
             for l in 1 : c_num_coeffs
                 cpoint = map(x -> x.points[l], c)
-                @constraint model cpoint - p .<= 1.5
-                @constraint model p - cpoint .<= 1.5
+                # @constraint model cpoint - p .<= 1.5
+                # @constraint model p - cpoint .<= 1.5
                 @constraint model cpoint[3] - p[3] >= 0.6 # TODO
-                # @constraint model sum(x -> x^2, cpoint - p) <= 1.5 # TODO
+                @constraint model sum(x -> x^2, cpoint - p) <= 1.2 # TODO
             end
         end
 
