@@ -1,8 +1,12 @@
+hide!(vis::AbstractVisualizer) = settransform!(vis, LinearMap(0I))
+
 struct CentroidalTrajectoryVisualizer{V<:AbstractVisualizer}
+    vis::V
     com_visualizer::V
     region_data::Vector{ContactRegion{Float64}}
     region_visualizers::Vector{V}
     force_visualizers::Vector{ArrowVisualizer{V}}
+    cone_visualizers::Vector{V}
     contact_position_visualizers::Vector{V}
     gravity_mag::Float64
 end
@@ -12,10 +16,11 @@ function CentroidalTrajectoryVisualizer(vis::AbstractVisualizer,
     com_visualizer = vis[:com]
     region_visualizers = [vis["region_$i"] for i in eachindex(region_data)]
     force_visualizers = [ArrowVisualizer(vis["f_$i"]) for i = 1 : num_contacts]
+    cone_visualizers = [vis["cone_$i"] for i = 1 : num_contacts]
     contact_position_visualizers = [vis["p_$i"] for i = 1 : num_contacts]
     gravity_mag = norm(g)
-    CentroidalTrajectoryVisualizer(
-        com_visualizer, region_data, region_visualizers, force_visualizers, contact_position_visualizers, gravity_mag)
+    CentroidalTrajectoryVisualizer(vis, com_visualizer, region_data, region_visualizers,
+        force_visualizers, cone_visualizers, contact_position_visualizers, gravity_mag)
 end
 
 function set_objects!(vis::CentroidalTrajectoryVisualizer)
@@ -32,20 +37,34 @@ function set_objects!(vis::CentroidalTrajectoryVisualizer)
     end
 
     # CoM
-    # img = PngImage(joinpath(@__DIR__, "..", "assets", "checkerboard.png"))
-    # com_material = MeshLambertMaterial(map=Texture(image=img, wrap=(1, 1), repeat=(1, 1)))
+    # img = PngImage(joinpath(@__DIR__, "..", "assets", "ps-neutral.png"))
+    # com_material = MeshLambertMaterial(map=Texture(image=img))#, wrap=(1, 1), repeat=(1, 1)))
     setobject!(vis.com_visualizer, HyperSphere(Point(0., 0, 0), 0.05))#, com_material)
+    hide!(vis.com_visualizer)
 
-    # Forces
+    # Forces / contact force cones
     force_orange = RGB(243 / 255, 118 / 255, 32 / 255)
-    for force_visualizer in vis.force_visualizers
+    force_orange_transparent = RGBA(force_orange, 0.2)
+    for (force_visualizer, cone_visualizer) in zip(vis.force_visualizers, vis.cone_visualizers)
         setobject!(force_visualizer, MeshLambertMaterial(; color=force_orange))
+        cone_height = 0.2
+        cone = Cone(Point(0., 0., cone_height), Point(0., 0., 0.), cone_height)
+        setobject!(cone_visualizer, cone, MeshLambertMaterial(color=force_orange_transparent))
+        hide!(cone_visualizer)
     end
 
     # Contact positions
     for contact_position_visualizer in vis.contact_position_visualizers
-        setobject!(contact_position_visualizer, HyperSphere(Point(0., 0, 0), 0.03))
+        setobject!(contact_position_visualizer, HyperSphere(Point(0., 0, 0), 0.02), MeshLambertMaterial(color=RGB(0.1, 0.1, 0.1)))
+        hide!(contact_position_visualizer)
     end
+    vis
+end
+
+function set_com_trajectory!(vis::CentroidalTrajectoryVisualizer, result::CentroidalTrajectoryResult)
+    ts = range(first(result.break_times), last(result.break_times); length=100)
+    geometry = PointCloud([Point(result.center_of_mass(t)) for t in ts])
+    setobject!(vis.vis[:com_trajectory], LineSegments(geometry, LineBasicMaterial()))
     vis
 end
 
@@ -55,10 +74,21 @@ function set_state!(vis::CentroidalTrajectoryVisualizer, result::CentroidalTraje
     settransform!(vis.com_visualizer, Translation(c))
 
     # Forces
-    for (force_vis, cop, force) in zip(vis.force_visualizers, result.centers_of_pressure, result.contact_forces)
+    for (force_vis, cone_vis, cop, force, indicator) in zip(vis.force_visualizers, vis.cone_visualizers, result.centers_of_pressure, result.contact_forces, result.contact_indicators)
         r = cop(t)
         f = force(t)
         settransform!(force_vis, Point(r), Vec(f / vis.gravity_mag))
+        zs = indicator(t)
+        if sum(zs) > 0.5
+            region_index = argmax(zs)
+            region = vis.region_data[region_index]
+            n = region.transform.linear[:, 3]
+            μ = region.μ
+            R = rotation_between(SVector(0, 0, 1), n)
+            settransform!(cone_vis, Translation(r) ∘ LinearMap(R) ∘ LinearMap(Diagonal(SVector(1, 1, 1 / μ))))
+        else
+            hide!(cone_vis)
+        end
     end
 
     # Contact positions
@@ -68,7 +98,7 @@ function set_state!(vis::CentroidalTrajectoryVisualizer, result::CentroidalTraje
         if sum(zs) > 0.5
             settransform!(position_vis, Translation(p))
         else
-            settransform!(position_vis, LinearMap(Diagonal(SVector(0, 0, 0))))
+            hide!(position_vis)
         end
     end
     vis

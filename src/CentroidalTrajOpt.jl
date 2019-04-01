@@ -5,7 +5,8 @@ export
     ContactRegion,
     solve!,
     center_of_mass,
-    normals
+    normals,
+    disallow_jumping!
 
 # Re-exports from other packages
 export
@@ -25,6 +26,7 @@ export
 export
     CentroidalTrajectoryVisualizer,
     set_objects!,
+    set_com_trajectory!,
     set_state!
 
 using JuMP
@@ -49,8 +51,10 @@ include("result.jl")
 
 using GeometryTypes: HyperSphere, Point, Vec
 import MeshCat
-using MeshCat: AbstractVisualizer, ArrowVisualizer, HyperSphere, RGB
-using MeshCat: MeshLambertMaterial, Texture, PngImage
+using MeshCat: AbstractVisualizer
+using MeshCat: RGB, RGBA
+using MeshCat: ArrowVisualizer, HyperSphere, PointCloud, LineSegments, Cone
+using MeshCat: MeshLambertMaterial, Texture, PngImage, LineBasicMaterial
 using MeshCat: setobject!, settransform!
 using Polyhedra: hrep, polyhedron, Mesh
 
