@@ -40,7 +40,7 @@ function set_objects!(vis::CentroidalTrajectoryVisualizer)
     # img = PngImage(joinpath(@__DIR__, "..", "assets", "ps-neutral.png"))
     # com_material = MeshLambertMaterial(map=Texture(image=img))#, wrap=(1, 1), repeat=(1, 1)))
     setobject!(vis.com_visualizer, HyperSphere(Point(0., 0, 0), 0.05))#, com_material)
-    hide!(vis.com_visualizer)
+    setvisible!(vis.com_visualizer, false)
 
     # Forces / contact force cones
     force_orange = RGB(243 / 255, 118 / 255, 32 / 255)
@@ -50,13 +50,13 @@ function set_objects!(vis::CentroidalTrajectoryVisualizer)
         cone_height = 0.2
         cone = Cone(Point(0., 0., cone_height), Point(0., 0., 0.), cone_height)
         setobject!(cone_visualizer, cone, MeshLambertMaterial(color=force_orange_transparent))
-        hide!(cone_visualizer)
+        setvisible!(cone_visualizer, false)
     end
 
     # Contact positions
     for contact_position_visualizer in vis.contact_position_visualizers
         setobject!(contact_position_visualizer, HyperSphere(Point(0., 0, 0), 0.02), MeshLambertMaterial(color=RGB(0.1, 0.1, 0.1)))
-        hide!(contact_position_visualizer)
+        setvisible!(contact_position_visualizer, false)
     end
     vis
 end
@@ -71,6 +71,7 @@ end
 function set_state!(vis::CentroidalTrajectoryVisualizer, result::CentroidalTrajectoryResult, t::Number)
     # CoM
     c = result.center_of_mass(t)
+    setvisible!(vis.com_visualizer, true)
     settransform!(vis.com_visualizer, Translation(c))
 
     # Forces
@@ -80,6 +81,7 @@ function set_state!(vis::CentroidalTrajectoryVisualizer, result::CentroidalTraje
         settransform!(force_vis, Point(r), Vec(f / vis.gravity_mag))
         zs = indicator(t)
         if sum(zs) > 0.5
+            setvisible!(cone_vis, true)
             region_index = argmax(zs)
             region = vis.region_data[region_index]
             n = region.transform.linear[:, 3]
@@ -87,7 +89,7 @@ function set_state!(vis::CentroidalTrajectoryVisualizer, result::CentroidalTraje
             R = rotation_between(SVector(0, 0, 1), n)
             settransform!(cone_vis, Translation(r) ∘ LinearMap(R) ∘ LinearMap(Diagonal(SVector(1, 1, 1 / μ))))
         else
-            hide!(cone_vis)
+            setvisible!(cone_vis, false)
         end
     end
 
@@ -96,9 +98,10 @@ function set_state!(vis::CentroidalTrajectoryVisualizer, result::CentroidalTraje
         p = position(t)
         zs = indicator(t)
         if sum(zs) > 0.5
+            setvisible!(position_vis, true)
             settransform!(position_vis, Translation(p))
         else
-            hide!(position_vis)
+            setvisible!(position_vis, false)
         end
     end
     vis

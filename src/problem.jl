@@ -288,10 +288,11 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
             for l in 1 : c_num_coeffs
                 cpoint = map(x -> x.points[l], c)
                 # @constraint model cpoint[3] >= 0.6 # TODO
-                set_lower_bound(cpoint[3], 0.7)
+                # set_lower_bound(cpoint[3], 0.7)
                 # @constraint model cpoint - p .<= 1.5
                 # @constraint model p - cpoint .<= 1.5
-                @constraint model sum(x -> x^2, cpoint - p) <= 1.2 # TODO
+                @constraint model sum(x -> x^2, cpoint - p) >= 0.5^2 # TODO
+                @constraint model sum(x -> x^2, cpoint - p) <= 1.2^2 # TODO
             end
         end
 

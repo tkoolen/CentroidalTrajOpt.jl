@@ -55,7 +55,7 @@ using MeshCat: AbstractVisualizer
 using MeshCat: RGB, RGBA
 using MeshCat: ArrowVisualizer, HyperSphere, PointCloud, LineSegments, Cone
 using MeshCat: MeshLambertMaterial, Texture, PngImage, LineBasicMaterial
-using MeshCat: setobject!, settransform!
+using MeshCat: setobject!, settransform!, setvisible!
 using Polyhedra: hrep, polyhedron, Mesh
 
 include("visualization.jl")

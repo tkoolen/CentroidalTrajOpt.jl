@@ -25,7 +25,7 @@ push!(region_data, ContactRegion(
 ))
 
 push!(region_data, ContactRegion(
-        AffineMap(one(RotMatrix{3}) * RotXYZ(0.1, -0.2, 0.3), SVector(1.0, 0.3, 0.2)),
+        AffineMap(one(RotMatrix{3}) * RotXYZ(0.1, -0.2, 0.3), SVector(1.0, 0.3, 0.4)),
         0.7,
         0.0,
         Float64[1 0; 0 1; -1 0; 0 -1],
@@ -33,8 +33,8 @@ push!(region_data, ContactRegion(
 ))
 
 # push!(region_data, ContactRegion(
-#         AffineMap(one(RotMatrix{3}) * RotXYZ(-0.2, -0.2, 0.5), SVector(-1.0, -0.5, 0.2)),
-#         1.0,
+#         AffineMap(one(RotMatrix{3}) * RotXYZ(0.1, -0.2, 0.3), SVector(0.0, 1.0, 0.2)),
+#         0.7,
 #         0.0,
 #         Float64[1 0; 0 1; -1 0; 0 -1],
 #         0.3 * ones(4)
@@ -42,7 +42,7 @@ push!(region_data, ContactRegion(
 
 # Initial conditions
 c0 = SVector(-0.05, 0.05, 1.0)
-ċ0 = SVector(0.4, 0.1, -0.1)
+ċ0 = SVector(0.6, 0.1, -0.1)
 contacts0 = [
     region_data[1] => SVector(0.0, 0.15, 0.0),
     region_data[1] => SVector(0.0, -0.15, 0.0),
@@ -67,7 +67,7 @@ disallow_jumping!(problem)
 # fix.(problem.z_vars[:, :, 1], [1.0 1.0; 0.0 0.0; 0.0 0.0])
 # fix.(problem.z_vars[:, :, 2], [0.0 0.0; -0.0 -0.0; 1.0 1.0])
 
-# SCIP.SCIPsetEmphasis(problem.model.moi_backend.optimizer.model.mscip, SCIP.SCIP_PARAMEMPHASIS_FEASIBILITY, true);
+SCIP.SCIPsetEmphasis(problem.model.moi_backend.optimizer.model.mscip, SCIP.SCIP_PARAMEMPHASIS_FEASIBILITY, true);
 
 ## Visualization
 using MeshCat
@@ -76,7 +76,7 @@ newvis = false
 if newvis || (!@isdefined vis) || isempty(vis.core.scope.pool.connections)
     vis = Visualizer()
     open(vis)
-    wait(vis)
+    # wait(vis)
 end
 delete!(vis)
 cvis = CentroidalTrajectoryVisualizer(vis, region_data, g, length(contacts0))
@@ -149,7 +149,7 @@ for t in range(0, T, length=100)
         fn_t = f_t ⋅ n
         # τn_t = τn(t)
 
-        @test fn_t >= 0
+        @test fn_t >= -1e-12
         @test norm(p(t) - r(t)) < max_cop_distance + 1e-5
 
         # TODO: μ checks (first, get region)
@@ -174,7 +174,7 @@ end
 set_com_trajectory!(cvis, result)
 let
     T = last(result.break_times)
-    max_rate = 0.3
+    max_rate = 1 / 2
     # max_rate = 1
     @throttle t for t in range(0, T, length = round(Int, 60 * T / max_rate))
         set_state!(cvis, result, t)
