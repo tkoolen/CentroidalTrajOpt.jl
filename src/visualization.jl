@@ -12,13 +12,12 @@ struct CentroidalTrajectoryVisualizer{V<:AbstractVisualizer}
 end
 
 function CentroidalTrajectoryVisualizer(vis::AbstractVisualizer,
-        region_data::Vector{ContactRegion{Float64}}, g::AbstractVector, num_contacts::Number)
+        region_data::Vector{ContactRegion{Float64}}, gravity_mag, num_contacts::Number)
     com_visualizer = vis[:com]
     region_visualizers = [vis["region_$i"] for i in eachindex(region_data)]
     force_visualizers = [ArrowVisualizer(vis["f_$i"]) for i = 1 : num_contacts]
     cone_visualizers = [vis["cone_$i"] for i = 1 : num_contacts]
     contact_position_visualizers = [vis["p_$i"] for i = 1 : num_contacts]
-    gravity_mag = norm(g)
     CentroidalTrajectoryVisualizer(vis, com_visualizer, region_data, region_visualizers,
         force_visualizers, cone_visualizers, contact_position_visualizers, gravity_mag)
 end
@@ -105,4 +104,23 @@ function set_state!(vis::CentroidalTrajectoryVisualizer, result::CentroidalTraje
         end
     end
     vis
+end
+
+function MeshCat.setanimation!(cvis::CentroidalTrajectoryVisualizer,
+        result::CentroidalTrajectoryResult;
+        fps::Integer=60,
+        play::Bool=true,
+        repetitions::Integer=1)
+    animation = Animation()
+    t0 = first(result.break_times)
+    tf = last(result.break_times)
+    num_frames = floor(Int, (tf - t0) * fps)
+    for frame in 0:num_frames
+        t = t0 + frame / fps
+        atframe(animation, cvis.vis, frame) do frame_vis
+            frame_cvis = CentroidalTrajectoryVisualizer(frame_vis, cvis.region_data, cvis.gravity_mag, length(cvis.force_visualizers))
+            set_state!(frame_cvis, result, t)
+        end
+    end
+    setanimation!(cvis.vis, animation, play=play, repetitions=repetitions)
 end

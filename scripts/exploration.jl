@@ -32,17 +32,17 @@ push!(region_data, ContactRegion(
         0.4 * ones(4)
 ))
 
-# push!(region_data, ContactRegion(
-#         AffineMap(one(RotMatrix{3}) * RotXYZ(0.1, -0.2, 0.3), SVector(0.0, 1.0, 0.2)),
-#         0.7,
-#         0.0,
-#         Float64[1 0; 0 1; -1 0; 0 -1],
-#         0.3 * ones(4)
-# ))
+push!(region_data, ContactRegion(
+        AffineMap(one(RotMatrix{3}) * RotXYZ(0.1, -0.2, 0.3), SVector(0.0, 1.0, 0.2)),
+        0.7,
+        0.0,
+        Float64[1 0; 0 1; -1 0; 0 -1],
+        0.3 * ones(4)
+))
 
 # Initial conditions
 c0 = SVector(-0.05, 0.05, 1.0)
-ċ0 = SVector(0.6, 0.1, -0.1)
+ċ0 = SVector(0.1, 0.7, 0.1)
 contacts0 = [
     region_data[1] => SVector(0.0, 0.15, 0.0),
     region_data[1] => SVector(0.0, -0.15, 0.0),
@@ -60,7 +60,7 @@ optimizer_factory = with_optimizer(SCIP.Optimizer, limits_gap=0.05, limits_time=
 # optimizer_factory = with_optimizer(Ipopt.Optimizer)
 
 problem = CentroidalTrajectoryProblem(optimizer_factory, region_data, c0, ċ0, contacts0;
-    g=g, max_cop_distance=max_cop_distance, num_pieces=3, c_degree=3);
+    g=g, max_cop_distance=max_cop_distance, num_pieces=5, c_degree=3);
 
 disallow_jumping!(problem)
 
@@ -79,7 +79,7 @@ if newvis || (!@isdefined vis) || isempty(vis.core.scope.pool.connections)
     # wait(vis)
 end
 delete!(vis)
-cvis = CentroidalTrajectoryVisualizer(vis, region_data, g, length(contacts0))
+cvis = CentroidalTrajectoryVisualizer(vis, region_data, norm(g), length(contacts0))
 set_objects!(cvis)
 sleep(0.1)
 
@@ -170,8 +170,12 @@ for t in result.break_times
     @test ċ(t - 1e-8) ≈ ċ(t + 1e-8) atol=1e-5
 end
 
-## Visualization
+## Initial state
 set_com_trajectory!(cvis, result)
+set_state!(cvis, result, 0.0)
+
+## Visualization
+# setanimation!(cvis, result)
 let
     T = last(result.break_times)
     max_rate = 1 / 2
@@ -182,7 +186,7 @@ let
 end
 
 ##
-
+set_state!(cvis, result, 1.0)
 set_state!(cvis, result, 3 / 3 * (last(result.break_times) - first(result.break_times)))
 
 ## Mode sequence
