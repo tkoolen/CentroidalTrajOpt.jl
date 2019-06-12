@@ -54,6 +54,13 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
     Δt_tolerance = 0.05 # TODO: constructor arg
 
     model = Model(optimizer_factory)
+    optimizer = backend(model)#.optimizer.model
+
+    optimizer_does_sos1 = MOI.supports_constraint(optimizer, MOI.VectorOfVariables, MOI.SOS1{Float64})
+    optimizer_does_sos1 || @info "Optimizer does not support SOS1 constraints; using sum <= 1 instead."
+
+    optimizer_does_soc = MOI.supports_constraint(optimizer, MOI.VectorOfVariables, MOI.SecondOrderCone)
+    optimizer_does_soc || @info "Optimizer does not support second order cone constraints; using quadratic constraints instead."
 
     # Indexing convention:
     # i: piece index
@@ -128,8 +135,12 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
         for j in 1 : num_contacts
             # Each contact can be assigned to at most one region
             contact = contacts(j)
-            @constraint model z_vars[piece, contact] in MOI.SOS1(collect(Float64, 1 : num_regions))
-            # @constraint model sum(z_vars[piece, contact]) <= 1
+
+            if optimizer_does_sos1
+                @constraint model z_vars[piece, contact] in MOI.SOS1(collect(Float64, 1 : num_regions))
+            else
+                @constraint model sum(z_vars[piece, contact]) <= 1
+            end
             if i == 1
                 # Initial contact assignment.
                 if contacts0[j] === nothing
@@ -137,7 +148,9 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
                 else
                     region_data0, p0 = contacts0[j]
                     m = findfirst(isequal(region_data0), region_data)
-                    fix(z_vars[piece, contact, regions(m)], 1, force=true)
+                    z_var = z_vars[piece, contact, regions(m)]
+                    fix(z_var, 1, force=true)
+                    unset_binary(z_var) # to make Alpine happpy
                     fix.(p_vars[piece, contact], p0, force=true)
                 end
             end
@@ -262,8 +275,11 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
                     μf̄z = @variable model lower_bound=0 upper_bound=μ * upper_bound(f̄z)
                     @constraint model μf̄z == μ * f̄z
                     @constraint model μf̄z <= Mf * μ * z
-                    @constraint model [μf̄z; f̄xy] in SecondOrderCone()
-                    # @constraint model f̄xy ⋅ f̄xy <= μf̄z^2
+                    if optimizer_does_soc
+                        @constraint model [μf̄z; f̄xy] in SecondOrderCone()
+                    else
+                        @constraint model f̄xy ⋅ f̄xy <= μf̄z^2
+                    end
                     # TODO: use a SOS condition?
                     # TODO: crude model
                     # τn = τn_vars[piece, contact, coeff]
@@ -293,6 +309,17 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
                 # @constraint model p - cpoint .<= 1.5
                 # @constraint model sum(x -> x^2, cpoint - p) >= 0.5^2 # TODO
                 @constraint model sum(x -> x^2, cpoint - p) <= 1.1^2 # TODO
+            end
+        end
+
+        # Inter-contact kinematic constraints
+        for j1 in 1 : num_contacts
+            contact1 = contacts(j1)
+            p1 = p_vars[piece, contact1]
+            for j2 in j1 + 1 : num_contacts
+                contact2 = contacts(j2)
+                p2 = p_vars[piece, contact2]
+                @constraint model sum(x -> x^2, (p1 - p2)) >= 0.1^2 # TODO: parameterize
             end
         end
 

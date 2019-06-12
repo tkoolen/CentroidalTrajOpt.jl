@@ -6,11 +6,18 @@
 # * better CoM kinematic constraints
 # * Initial condition modification
 
+using Pkg
+Pkg.activate(@__DIR__)
+
 using CentroidalTrajOpt
 using LinearAlgebra
 using AmplNLWriter
 using Ipopt
 using SCIP
+using Alpine
+using Juniper
+using Gurobi
+using CPLEX
 using JuMP
 using Rotations
 
@@ -25,7 +32,7 @@ push!(region_data, ContactRegion(
 ))
 
 push!(region_data, ContactRegion(
-        AffineMap(one(RotMatrix{3}) * RotXYZ(0.1, -0.2, 0.3), SVector(1.0, 0.3, 0.4)),
+        AffineMap(one(RotMatrix{3}) * RotXYZ(0.1, -0.2, 0.3), SVector(1.0, 0.3, 0.2)),
         0.7,
         0.0,
         Float64[1 0; 0 1; -1 0; 0 -1],
@@ -42,7 +49,7 @@ push!(region_data, ContactRegion(
 
 # Initial conditions
 c0 = SVector(-0.05, 0.05, 1.0)
-ċ0 = SVector(0.1, 0.7, 0.1)
+ċ0 = SVector(0.0, 0.4, 0.0)
 contacts0 = [
     region_data[1] => SVector(0.0, 0.15, 0.0),
     region_data[1] => SVector(0.0, -0.15, 0.0),
@@ -52,12 +59,21 @@ contacts0 = [
 g = SVector(0.0, 0.0, -9.81);
 max_cop_distance = 0.07
 
-optimizer_factory = with_optimizer(SCIP.Optimizer, limits_gap=0.05, limits_time=10 * 60 * 60, display_verblevel=5,
-    display_width=120, history_valuebased=true, lp_threads=10, branching_preferbinary=true, heuristics_multistart_freq=20, heuristics_multistart_onlynlps=false)#, heuristics_mpec_priority=536870911)#heuristics_subnlp_priority=536870911)#, nlp_solver="ipopt", heuristics_nlpdiving_priority=536870911)#,;
+# optimizer_factory = with_optimizer(SCIP.Optimizer, limits_gap=0.05, limits_time=10 * 60 * 60, display_verblevel=5,
+#     display_width=120, history_valuebased=true, lp_threads=10, branching_preferbinary=true, lp_scaling=false, 
+#     branching_allfullstrong_priority=536870911, heuristics_multistart_freq=20, heuristics_multistart_onlynlps=false, heuristics_mpec_priority=536870911)#heuristics_subnlp_priority=536870911)#, nlp_solver="ipopt", heuristics_nlpdiving_priority=536870911)#,;
 # optimizer_factory = with_optimizer(AmplNLWriter.Optimizer, "/home/twan/code/bonmin/Bonmin-1.8.7/build/bin/bonmin")
 # optimizer_factory = with_optimizer(AmplNLWriter.Optimizer, "/home/twan/code/couenne/couenne")
-
 # optimizer_factory = with_optimizer(Ipopt.Optimizer)
+# optimizer_factory = with_optimizer(Alpine.Optimizer, nlp_optimizer=Ipopt.Optimizer(print_level=0), mip_optimizer=Gurobi.Optimizer(OutputFlag=0))
+# optimizer_factory = let params = Dict{Symbol,Any}()
+#     params[:nl_solver] = with_optimizer(Ipopt.Optimizer, print_level=0)
+#     # params[:mip_solver] = with_optimizer(Gurobi.Optimizer, OutputFlag=0)
+#     params[:mip_solver] = with_optimizer(CPLEX.Optimizer, CPX_PARAM_SCRIND=0)
+#     # Note to self: if you get "Cannot set bounds because variable is of type: BINARY", use LinQuadOptInterface master (needs #91)
+#     params[:feasibility_pump] = false
+#     with_optimizer(Juniper.Optimizer, params)
+# end
 
 problem = CentroidalTrajectoryProblem(optimizer_factory, region_data, c0, ċ0, contacts0;
     g=g, max_cop_distance=max_cop_distance, num_pieces=5, c_degree=3);
@@ -67,7 +83,16 @@ disallow_jumping!(problem)
 # fix.(problem.z_vars[:, :, 1], [1.0 1.0; 0.0 0.0; 0.0 0.0])
 # fix.(problem.z_vars[:, :, 2], [0.0 0.0; -0.0 -0.0; 1.0 1.0])
 
-SCIP.SCIPsetEmphasis(problem.model.moi_backend.optimizer.model.mscip, SCIP.SCIP_PARAMEMPHASIS_FEASIBILITY, true);
+if optimizer_factory.constructor == SCIP.Optimizer
+    problem.model.optimize_hook = function (model)
+        mscip = backend(model).optimizer.model.mscip
+        # SCIP.SCIPsetEmphasis(mscip, SCIP.SCIP_PARAMEMPHASIS_FEASIBILITY, true)
+        # SCIP.SCIPsetPresolving(mscip, SCIP.SCIP_PARAMSETTING_AGGRESSIVE, true)
+        # SCIP.SCIPsetHeuristics(mscip, SCIP.SCIP_PARAMSETTING_AGGRESSIVE, true)
+        MOI.optimize!(backend(model))
+        return
+    end
+end
 
 ## Visualization
 using MeshCat
@@ -86,8 +111,11 @@ sleep(0.1)
 ## Feasibility
 result = solve!(problem);
 
-# SCIP.SCIPprintStatistics(problem.model.moi_backend.optimizer.model.mscip, Libc.FILE(RawFD(1), "w"))
-# SCIP.SCIPprintHeuristicStatistics(problem.model.moi_backend.optimizer.model.mscip, Libc.FILE(RawFD(1), "w"))
+if backend(problem.model).optimizer.model isa SCIP.Optimizer
+    mscip = backend(problem.model).optimizer.model.mscip
+    # SCIP.print_statistics(mscip)
+    SCIP.print_heuristic_statistics(mscip)
+end
 
 ## Optimality
 
@@ -137,7 +165,7 @@ for t in range(0, T, length=100)
     # Friction cones
     for j in problem.contacts.val
         zs = result.contact_indicators[j](t)
-        @test sum(zs) <= 1
+        @test sum(zs) <= 1 + 1e-6
         region = findfirst(isequal(1), zs)
 
         f = fs[j]
@@ -175,19 +203,19 @@ set_com_trajectory!(cvis, result)
 set_state!(cvis, result, 0.0)
 
 ## Visualization
-# setanimation!(cvis, result)
-let
-    T = last(result.break_times)
-    max_rate = 1 / 2
-    # max_rate = 1
-    @throttle t for t in range(0, T, length = round(Int, 60 * T / max_rate))
-        set_state!(cvis, result, t)
-    end max_rate=max_rate
-end
+setanimation!(cvis, result)
+# let
+#     T = last(result.break_times)
+#     max_rate = 1 / 2
+#     # max_rate = 1
+#     @throttle t for t in range(0, T, length = round(Int, 60 * T / max_rate))
+#         set_state!(cvis, result, t)
+#     end max_rate=max_rate
+# end
 
 ##
-set_state!(cvis, result, 1.0)
-set_state!(cvis, result, 3 / 3 * (last(result.break_times) - first(result.break_times)))
+# set_state!(cvis, result, 1.0)
+# set_state!(cvis, result, 3 / 3 * (last(result.break_times) - first(result.break_times)))
 
 ## Mode sequence
 value.(problem.z_vars)

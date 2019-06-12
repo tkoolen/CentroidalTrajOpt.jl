@@ -89,6 +89,7 @@ function set_state!(vis::CentroidalTrajectoryVisualizer, result::CentroidalTraje
             settransform!(cone_vis, Translation(r) ∘ LinearMap(R) ∘ LinearMap(Diagonal(SVector(1, 1, 1 / μ))))
         else
             setvisible!(cone_vis, false)
+            settransform!(cone_vis, LinearMap(0I))
         end
     end
 
@@ -101,6 +102,7 @@ function set_state!(vis::CentroidalTrajectoryVisualizer, result::CentroidalTraje
             settransform!(position_vis, Translation(p))
         else
             setvisible!(position_vis, false)
+            settransform!(position_vis, LinearMap(0I))
         end
     end
     vis
