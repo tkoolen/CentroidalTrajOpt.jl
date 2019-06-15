@@ -37,7 +37,7 @@ function constrain_poly_equal(model, x::Polynomial, y::Polynomial)
 end
 
 function constrain_poly_equal(model, x::BezierCurve, y::BezierCurve)
-    @constraint model SVector(x.points) .== SVector(y.points)
+    @constraint model SVector(x.coeffs) .== SVector(y.coeffs)
 end
 
 function constrain_poly_equal(model, x::Polynomial{N}, y::Number) where N
@@ -78,5 +78,5 @@ end
 # end
 
 # JuMP.value(x::Polynomial) = Polynomial(JuMP.value.(x.coeffs))
-# JuMP.value(x::BezierCurve) = BezierCurve(JuMP.value.(x.points))
+# JuMP.value(x::BezierCurve) = BezierCurve(JuMP.value.(x.coeffs))
 # JuMP.value(x::Piecewise) = Piecewise(JuMP.value.(x.subfunctions), JuMP.value.(x.breaks), x.clamp)

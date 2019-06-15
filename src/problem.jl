@@ -302,7 +302,7 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
             contact = contacts(j)
             p = p_vars[piece, contact]
             for l in 1 : c_num_coeffs
-                cpoint = map(x -> x.points[l], c)
+                cpoint = map(x -> x.coeffs[l], c)
                 @constraint model cpoint[3] - p[3] >= 0.6 # TODO
                 # set_lower_bound(cpoint[3], 0.7)
                 # @constraint model cpoint - p .<= 1.5
