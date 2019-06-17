@@ -1,0 +1,6 @@
+threads         10
+maxtime         600
+prtimefreq         5
+allowipopt         1
+allowfiltersqp         1
+allowfiltersd         1

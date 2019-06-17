@@ -25,6 +25,16 @@ struct CentroidalTrajectoryProblem
     normals
 end
 
+module ObjectiveTypes
+export ObjectiveType
+@enum ObjectiveType begin
+    FEASIBILITY
+    MIN_TIME
+    MIN_EXCURSION
+end
+end
+using .ObjectiveTypes
+
 function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
         region_data::AbstractVector{<:ContactRegion},
         c0::AbstractVector{<:Number},
@@ -33,17 +43,20 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
         c_degree = 3,
         num_pieces = 2,
         g = SVector(0.0, 0.0, -9.81),
-        max_cop_distance = 0.1
+        max_cop_distance = 0.1,
+        objective_type::ObjectiveType = FEASIBILITY
     )
 
     c_num_coeffs = c_degree + 1
     f_num_coeffs = c_num_coeffs - 2
+    r_num_coeffs = c_num_coeffs
     num_regions = length(region_data)
     num_contacts = length(contacts0)
 
     # Axes
     c_coeffs = Axis{:c_coeff}(1 : c_num_coeffs)
     f_coeffs = Axis{:f_coeff}(1 : f_num_coeffs)
+    r_coeffs = Axis{:r_coeff}(1 : r_num_coeffs)
     contacts = Axis{:contact}(1 : num_contacts)
     regions = Axis{:region}(1 : num_regions)
     pieces = Axis{:piece}(1 : num_pieces)
@@ -83,7 +96,9 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
             set_upper_bound(Δtsq, Δtmax^2)
             @constraint model Δtsq == Δt^2
         end
-        # @objective model Min sum(Δts)
+        if objective_type == ObjectiveTypes.MIN_TIME
+            @objective model Min sum(Δts)
+        end
     else
         Δtsqs = map(x -> x^2, Δts)
     end
@@ -108,16 +123,18 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
         lower_bound=-2, upper_bound=2)
     p̄_vars = axis_array_vars(model, (i, j, k, m) -> "P̄[p$i, c$j, $k, r$m]", pieces, contacts, coords2d, regions;
         lower_bound=-1, upper_bound=1)
-    r_vars = axis_array_vars(model, (i, j, k, l) -> "R[p$i, c$j, $k, $l]", pieces, contacts, coords, c_coeffs;
+    r_vars = axis_array_vars(model, (i, j, k, l) -> "R[p$i, c$j, $k, $l]", pieces, contacts, coords, r_coeffs;
         lower_bound=-2, upper_bound=2)
-    r̄_vars = axis_array_vars(model, (i, j, k, l, m) -> "R̄[p$i, c$j, $k, $l, r$m]", pieces, contacts, coords2d, c_coeffs, regions;
+    r̄_vars = axis_array_vars(model, (i, j, k, l, m) -> "R̄[p$i, c$j, $k, $l, r$m]", pieces, contacts, coords2d, r_coeffs, regions;
         lower_bound=-1, upper_bound=1)
     # τn_vars = axis_array_vars(model, (i, j, l) -> "Tn[p$i, c$j, $l]", pieces, contacts, f_coeffs;
     #     lower_bound=-1 * norm(g), upper_bound=1 * norm(g))
 
     #@variable model objval
-    #@constraint model objval >= sum((c_vars[pieces(i), c_coeffs(l)] - c0) ⋅ (c_vars[pieces(i), c_coeffs(l)] - c0) for i in 1 : num_pieces, l in 1 : c_num_coeffs)
-    #@objective model Min objval
+    if objective_type == ObjectiveTypes.MIN_EXCURSION
+        # @constraint model objval >= sum((c_vars[pieces(i), c_coeffs(l)] - c0) ⋅ (c_vars[pieces(i), c_coeffs(l)] - c0) for i in 1 : num_pieces, l in 1 : c_num_coeffs)
+        @objective model Min sum(x -> x ⋅ x, (c_vars[pieces(i), c_coeffs(l)] - c0) for i in 1 : num_pieces, l in 1 : c_num_coeffs)
+    end
     # @objective model Max sum(z_vars)
 
     cprev = nothing
@@ -235,8 +252,8 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
                 @constraint model -(p - transform([p̄; 0])) .<= Mr * (1 - z)
 
                 # CoP constraints
-                for l = 1 : c_num_coeffs
-                    coeff = c_coeffs(l)
+                for l = 1 : r_num_coeffs
+                    coeff = r_coeffs(l)
                     r = r_vars[piece, contact, coeff]
                     r̄ = r̄_vars[piece, contact, coeff, region]
                     @constraint model A * r̄ .<= b

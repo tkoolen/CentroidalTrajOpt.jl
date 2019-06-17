@@ -50,7 +50,7 @@ push!(region_data, ContactRegion(
 
 # Initial conditions
 c0 = SVector(-0.05, 0.05, 1.0)
-ċ0 = SVector(0.0, 0.4, 0.0)
+ċ0 = SVector(0.5, 0.7, 0.0)
 contacts0 = [
     region_data[1] => SVector(0.0, 0.15, 0.0),
     region_data[1] => SVector(0.0, -0.15, 0.0),
@@ -75,10 +75,11 @@ max_cop_distance = 0.07
 #     params[:feasibility_pump] = false
 #     with_optimizer(Juniper.Optimizer, params)
 # end
-optimizer_factory = with_optimizer(BARON.Optimizer)
+optimizer_factory = with_optimizer(BARON.Optimizer;
+    threads=Sys.CPU_THREADS ÷ 2, MaxTime=10 * 60.0, PrTimeFreq=5., AllowFilterSD=1, AllowFilterSQP=1, AllowIpopt=1#=, NumLoc=20, LocRes=1=#)
 
 problem = CentroidalTrajectoryProblem(optimizer_factory, region_data, c0, ċ0, contacts0;
-    g=g, max_cop_distance=max_cop_distance, num_pieces=5, c_degree=3);
+    g=g, max_cop_distance=max_cop_distance, num_pieces=5, c_degree=3, objective_type=ObjectiveTypes.FEASIBILITY);
 
 disallow_jumping!(problem)
 
@@ -127,6 +128,11 @@ end
 # result = solve!(problem);
 # set_objective(problem.model, MOI.MIN_SENSE, sum(problem.Δts))
 # result = solve!(problem);
+
+if optimizer_factory.constructor == BARON.Optimizer
+    @show backend(problem.model).optimizer.model.optimizer.inner.problem_file_name
+    @show backend(problem.model).optimizer.model.optimizer.inner.result_file_name
+end
 
 ## Tests
 using Test
@@ -179,7 +185,7 @@ for t in range(0, T, length=100)
         fn_t = f_t ⋅ n
         # τn_t = τn(t)
 
-        @test fn_t >= -1e-12
+        @test fn_t >= -1e-7
         @test norm(p(t) - r(t)) < max_cop_distance + 1e-5
 
         # TODO: μ checks (first, get region)

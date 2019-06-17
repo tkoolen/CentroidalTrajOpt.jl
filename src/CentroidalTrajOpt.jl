@@ -6,7 +6,8 @@ export
     solve!,
     center_of_mass,
     normals,
-    disallow_jumping!
+    disallow_jumping!,
+    ObjectiveTypes
 
 # Re-exports from other packages
 export
