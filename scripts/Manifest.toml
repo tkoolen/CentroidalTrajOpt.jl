@@ -20,7 +20,7 @@ version = "0.3.0"
 
 [[BARON]]
 deps = ["MathOptInterface", "MathProgBase", "Test"]
-git-tree-sha1 = "cc7003fbf9a74564ee212bcd774aff1da2aec21d"
+git-tree-sha1 = "9b0b4556a29ef3a18dedbb97259d8327cd000450"
 repo-rev = "tk/moi"
 repo-url = "git@github.com:tkoolen/BARON.jl.git"
 uuid = "2e2ca445-9e14-5b13-8677-4410f177f82b"
@@ -327,8 +327,8 @@ version = "0.3.0"
 [[MeshCat]]
 deps = ["AssetRegistry", "Base64", "BinDeps", "Colors", "CoordinateTransformations", "DocStringExtensions", "GeometryTypes", "JSExpr", "LinearAlgebra", "MsgPack", "Mux", "Parameters", "Requires", "Rotations", "Sockets", "StaticArrays", "UUIDs", "WebIO"]
 git-tree-sha1 = "33225b15b2eb74c8ed248c8c0382db29f214cbf0"
-repo-rev = "tk/fix-tiny-arrow"
-repo-url = "git@github.com:tkoolen/MeshCat.jl.git"
+repo-rev = "master"
+repo-url = "https://github.com/rdeits/MeshCat.jl.git"
 uuid = "283c5d60-a78f-5afe-a0af-af636b173e11"
 version = "0.6.0"
 
