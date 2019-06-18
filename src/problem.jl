@@ -23,6 +23,7 @@ struct CentroidalTrajectoryProblem
 
     # Other data
     normals
+    friction_cone_quadratic_constraints
 end
 
 module ObjectiveTypes
@@ -139,6 +140,7 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
 
     cprev = nothing
     c′prev = nothing
+    friction_cone_quadratic_constraints = []
 
     for i in 1 : num_pieces
         piece = pieces(i)
@@ -295,7 +297,8 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
                     if optimizer_does_soc
                         @constraint model [μf̄z; f̄xy] in SecondOrderCone()
                     else
-                        @constraint model f̄xy ⋅ f̄xy <= μf̄z^2
+                        friction_cone_quadratic_constraint = @constraint model f̄xy ⋅ f̄xy <= μf̄z^2
+                        push!(friction_cone_quadratic_constraints, friction_cone_quadratic_constraint)
                     end
                     # TODO: use a SOS condition?
                     # TODO: crude model
@@ -347,7 +350,7 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
     CentroidalTrajectoryProblem(model,
         c_coeffs, f_coeffs, contacts, regions, pieces, coords, coords2d,
         c_vars, f_vars, f̄_vars, p_vars, r_vars, r̄_vars, #=τn_vars,=# Δts, z_vars,
-        ns
+        ns, friction_cone_quadratic_constraints
     )
 end
 

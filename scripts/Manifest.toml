@@ -20,7 +20,7 @@ version = "0.3.0"
 
 [[BARON]]
 deps = ["MathOptInterface", "MathProgBase", "Test"]
-git-tree-sha1 = "9b0b4556a29ef3a18dedbb97259d8327cd000450"
+git-tree-sha1 = "812d10b843a8a476cfe48af94589aaa3b1bf8c08"
 repo-rev = "tk/moi"
 repo-url = "git@github.com:tkoolen/BARON.jl.git"
 uuid = "2e2ca445-9e14-5b13-8677-4410f177f82b"
@@ -270,12 +270,10 @@ uuid = "9c8b4983-aa76-5018-a973-4c85ecc9e179"
 version = "0.8.0"
 
 [[LinQuadOptInterface]]
-deps = ["LinearAlgebra", "MathOptInterface", "SparseArrays", "Test"]
-git-tree-sha1 = "09d391e2b945ddf5ca550d6917a1fcb39334af9c"
-repo-rev = "master"
-repo-url = "https://github.com/JuliaOpt/LinQuadOptInterface.jl.git"
+deps = ["Compat", "MathOptInterface"]
+git-tree-sha1 = "d6692a09d0424e34c884cd819b8ed47943eefc20"
 uuid = "f8899e07-120b-5979-ab1d-7b97bb9e1a48"
-version = "0.6.0+"
+version = "0.6.0"
 
 [[LinearAlgebra]]
 deps = ["Libdl"]
@@ -348,11 +346,11 @@ uuid = "99f44e22-a591-53d1-9472-aa23ef4bd671"
 version = "0.2.0"
 
 [[MultilinearOpt]]
-deps = ["JuMP", "LinearAlgebra", "MathOptInterface", "PiecewiseLinearOpt", "Test"]
-git-tree-sha1 = "8a37dd23e41255fc503fabd64096ec736b99d740"
-repo-rev = "master"
-repo-url = "git@github.com:joehuchette/MultilinearOpt.jl.git"
-uuid = "f9bd3ce9-0f61-51c3-a66c-1e4651dca1d2"
+deps = ["JuMP", "LinearAlgebra", "MathOptInterface", "PiecewiseLinearOpt"]
+git-tree-sha1 = "cda6bcc04a47835f8063865b260af82e3d7c62e0"
+repo-rev = "tk/quadratic-terms"
+repo-url = "https://github.com/joehuchette/MultilinearOpt.jl.git"
+uuid = "056e1bd9-d272-5a02-876b-3036887dbe22"
 version = "0.0.0"
 
 [[Mux]]

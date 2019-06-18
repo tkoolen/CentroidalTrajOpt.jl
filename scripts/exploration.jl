@@ -17,10 +17,11 @@ using SCIP
 using BARON
 # using Alpine
 # using Juniper
-# using CPLEX
+using CPLEX
 using Gurobi
 using JuMP
 using Rotations
+using MultilinearOpt
 
 # Environment setup
 region_data = ContactRegion{Float64}[]
@@ -50,7 +51,8 @@ push!(region_data, ContactRegion(
 
 # Initial conditions
 c0 = SVector(-0.05, 0.05, 1.0)
-ċ0 = SVector(0.5, 0.7, 0.0)
+ċ0 = SVector(0.5, 0.4, 0.0)
+# ċ0 = SVector(0.05, 0.0, 0.0)
 contacts0 = [
     region_data[1] => SVector(0.0, 0.15, 0.0),
     region_data[1] => SVector(0.0, -0.15, 0.0),
@@ -77,6 +79,7 @@ max_cop_distance = 0.07
 # end
 optimizer_factory = with_optimizer(BARON.Optimizer;
     threads=Sys.CPU_THREADS ÷ 2, MaxTime=10 * 60.0, PrTimeFreq=5., AllowFilterSD=1, AllowFilterSQP=1, AllowIpopt=1#=, NumLoc=20, LocRes=1=#)
+# optimizer_factory = with_optimizer(Gurobi.Optimizer)
 
 problem = CentroidalTrajectoryProblem(optimizer_factory, region_data, c0, ċ0, contacts0;
     g=g, max_cop_distance=max_cop_distance, num_pieces=5, c_degree=3, objective_type=ObjectiveTypes.FEASIBILITY);
@@ -95,6 +98,11 @@ if optimizer_factory.constructor == SCIP.Optimizer
         MOI.optimize!(backend(model))
         return
     end
+end
+
+relax = optimizer_factory.constructor == Gurobi.Optimizer || optimizer_factory.constructor == CPLEX.Optimizer
+if relax
+    relaxbilinear!(problem.model, method=:Logarithmic1D, disc_level=17, constraints_to_skip=problem.friction_cone_quadratic_constraints)
 end
 
 ## Visualization
@@ -168,13 +176,15 @@ for t in range(0, T, length=100)
     # τ = sum((rs[j](t) - c(t)) × fs[j](t) + n * τns[j](t) for j in problem.contacts.val)
     τ = sum((rs[j](t) - c(t)) × fs[j](t) for j in problem.contacts.val)
 
-    @test τ ≈ zeros(3) atol=1e-4
+    if !relax
+        @test τ ≈ zeros(3) atol=1e-4
+    end
 
     # Friction cones
     for j in problem.contacts.val
         zs = result.contact_indicators[j](t)
         @test sum(zs) <= 1 + 1e-6
-        region = findfirst(isequal(1), zs)
+        region_idx = findfirst(isequal(1), zs)
 
         f = fs[j]
         # τn = τns[j]
@@ -188,14 +198,15 @@ for t in range(0, T, length=100)
         @test fn_t >= -1e-7
         @test norm(p(t) - r(t)) < max_cop_distance + 1e-5
 
-        # TODO: μ checks (first, get region)
-#         @test norm(f_t - n * fn_t) <= μ * fn_t + 1e-6
-#         @test -μrot * fn_t <= τn_t
-#         @test τn_t <= μrot * fn_s
-
-        if region == nothing
+        if region_idx == nothing
             @test f_t ≈ zero(f_t) atol=1e-4
             # @test τn_t ≈ zero(τn_t) atol=1e-4
+        else
+            region = region_data[region_idx]
+            μ = region.μ
+            @test norm(f_t - n * fn_t) <= μ * fn_t + 1e-6
+            # @test -μrot * fn_t <= τn_t
+            # @test τn_t <= μrot * fn_s
         end
     end
 end
@@ -211,7 +222,7 @@ set_com_trajectory!(cvis, result)
 set_state!(cvis, result, 0.0)
 
 ## Visualization
-setanimation!(cvis, result)
+setanimation!(cvis, result);
 # let
 #     T = last(result.break_times)
 #     max_rate = 1 / 2
@@ -226,4 +237,4 @@ setanimation!(cvis, result)
 # set_state!(cvis, result, 3 / 3 * (last(result.break_times) - first(result.break_times)))
 
 ## Mode sequence
-value.(problem.z_vars)
+# value.(problem.z_vars)
