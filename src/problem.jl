@@ -83,8 +83,8 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
     # l: coefficient index
     # m: region index
 
-    # Δts = AxisArray(fill(0.3, length(pieces)), pieces)
-    Δts = nothing
+    Δts = AxisArray(fill(0.3, length(pieces)), pieces)
+    # Δts = nothing
     if Δts === nothing
         Δts = axis_array_vars(model, i -> "Δt[$i]", pieces)
         Δtsqs = axis_array_vars(model, i -> "Δtsq[$i]", pieces)
@@ -121,11 +121,11 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
     f̄_vars = axis_array_vars(model, (i, j, k, l, m) -> "F̄[p$i, c$j, $k, $l, r$m]", pieces, contacts, coords, f_coeffs, regions;
         lower_bound=-3 * norm(g), upper_bound=3 * norm(g))
     p_vars = axis_array_vars(model, (i, j, k) -> "P[p$i, c$j, $k]", pieces, contacts, coords;
-        lower_bound=-2, upper_bound=2)
+        lower_bound=-1.5, upper_bound=1.5)
     p̄_vars = axis_array_vars(model, (i, j, k, m) -> "P̄[p$i, c$j, $k, r$m]", pieces, contacts, coords2d, regions;
-        lower_bound=-1, upper_bound=1)
+        lower_bound=-0.5, upper_bound=0.5)
     r_vars = axis_array_vars(model, (i, j, k, l) -> "R[p$i, c$j, $k, $l]", pieces, contacts, coords, r_coeffs;
-        lower_bound=-2, upper_bound=2)
+        lower_bound=-1, upper_bound=1)
     r̄_vars = axis_array_vars(model, (i, j, k, l, m) -> "R̄[p$i, c$j, $k, $l, r$m]", pieces, contacts, coords2d, r_coeffs, regions;
         lower_bound=-1, upper_bound=1)
     # τn_vars = axis_array_vars(model, (i, j, l) -> "Tn[p$i, c$j, $l]", pieces, contacts, f_coeffs;

@@ -77,9 +77,9 @@ max_cop_distance = 0.07
 #     params[:feasibility_pump] = false
 #     with_optimizer(Juniper.Optimizer, params)
 # end
-optimizer_factory = with_optimizer(BARON.Optimizer;
-    threads=Sys.CPU_THREADS ÷ 2, MaxTime=10 * 60.0, PrTimeFreq=5., AllowFilterSD=1, AllowFilterSQP=1, AllowIpopt=1#=, NumLoc=20, LocRes=1=#)
-# optimizer_factory = with_optimizer(Gurobi.Optimizer)
+# optimizer_factory = with_optimizer(BARON.Optimizer;
+#     threads=Sys.CPU_THREADS ÷ 2, MaxTime=10 * 60.0, PrTimeFreq=5., AllowFilterSD=1, AllowFilterSQP=1, AllowIpopt=1#=, NumLoc=20, LocRes=1=#)
+optimizer_factory = with_optimizer(Gurobi.Optimizer)
 
 problem = CentroidalTrajectoryProblem(optimizer_factory, region_data, c0, ċ0, contacts0;
     g=g, max_cop_distance=max_cop_distance, num_pieces=5, c_degree=3, objective_type=ObjectiveTypes.FEASIBILITY);
@@ -102,7 +102,7 @@ end
 
 relax = optimizer_factory.constructor == Gurobi.Optimizer || optimizer_factory.constructor == CPLEX.Optimizer
 if relax
-    relaxbilinear!(problem.model, method=:Logarithmic1D, disc_level=17, constraints_to_skip=problem.friction_cone_quadratic_constraints)
+    relaxbilinear!(problem.model, method=:Logarithmic1D, disc_level=11, constraints_to_skip=problem.friction_cone_quadratic_constraints)
 end
 
 ## Visualization
@@ -141,6 +141,13 @@ if optimizer_factory.constructor == BARON.Optimizer
     @show backend(problem.model).optimizer.model.optimizer.inner.problem_file_name
     @show backend(problem.model).optimizer.model.optimizer.inner.result_file_name
 end
+
+## Initial state
+set_com_trajectory!(cvis, result)
+set_state!(cvis, result, 0.0)
+
+## Visualization
+setanimation!(cvis, result);
 
 ## Tests
 using Test
@@ -217,12 +224,6 @@ for t in result.break_times
     @test ċ(t - 1e-8) ≈ ċ(t + 1e-8) atol=1e-5
 end
 
-## Initial state
-set_com_trajectory!(cvis, result)
-set_state!(cvis, result, 0.0)
-
-## Visualization
-setanimation!(cvis, result);
 # let
 #     T = last(result.break_times)
 #     max_rate = 1 / 2
