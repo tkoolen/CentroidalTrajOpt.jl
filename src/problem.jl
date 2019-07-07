@@ -328,7 +328,7 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
                 # @constraint model cpoint - p .<= 1.5
                 # @constraint model p - cpoint .<= 1.5
                 # @constraint model sum(x -> x^2, cpoint - p) >= 0.5^2 # TODO
-                @constraint model sum(x -> x^2, cpoint - p) <= 1.1^2 # TODO
+                @constraint model sum(x -> x^2, cpoint - p) <= 1.2^2 # TODO
             end
         end
 

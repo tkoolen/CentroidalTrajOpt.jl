@@ -26,7 +26,6 @@ using CentroidalTrajOpt: extrude
 
 using RigidBodyDynamics
 using RigidBodyDynamics.Contact
-using MeshCat
 using MeshCatMechanisms
 using GeometryTypes: Point
 using QPWalkingControl
@@ -43,6 +42,8 @@ function create_atlas()
     # foot_polygons = make_foot_polygons(mechanism, sole_frames, foot_points; num_extreme_points=4);
     nominal_state = MechanismState(mechanism)
     AtlasRobot.setnominal!(nominal_state)
+    floating_joint = first(joints(mechanism))
+    configuration(nominal_state, floating_joint)[end] += -0.0028061189941; # FIXME
     link_colors = Dict(map(body -> string(body) => RGBA(0.7f0, 0.7f0, 0.7f0, 0.3f0), bodies(mechanism)))
     visuals = URDFVisuals(AtlasRobot.urdfpath(); package_path=[AtlasRobot.packagepath()], link_colors=link_colors)
     mechanism, nominal_state, foot_points, sole_frames, visuals
@@ -62,20 +63,20 @@ function create_environment()
             Float64[1 0; 0 1; -1 0; 0 -1],
             0.2 * ones(4)
     ))
-    push!(region_data, ContactRegion(
-            AffineMap(one(RotMatrix{3}) * RotXYZ(0.1, -0.2, 0.3), SVector(1.0, 0.3, 0.2)),
-            0.7,
-            0.0,
-            Float64[1 0; 0 1; -1 0; 0 -1],
-            0.4 * ones(4)
-    ))
-    push!(region_data, ContactRegion(
-            AffineMap(one(RotMatrix{3}) * RotXYZ(0.1, -0.2, 0.3), SVector(0.0, 1.0, 0.2)),
-            0.7,
-            0.0,
-            Float64[1 0; 0 1; -1 0; 0 -1],
-            0.3 * ones(4)
-    ))
+    # push!(region_data, ContactRegion(
+    #         AffineMap(one(RotMatrix{3}) * RotXYZ(0.1, -0.2, 0.3), SVector(1.0, 0.3, 0.2)),
+    #         0.7,
+    #         0.0,
+    #         Float64[1 0; 0 1; -1 0; 0 -1],
+    #         0.4 * ones(4)
+    # ))
+    # push!(region_data, ContactRegion(
+    #         AffineMap(one(RotMatrix{3}) * RotXYZ(0.1, -0.2, 0.3), SVector(0.0, 1.0, 0.2)),
+    #         0.7,
+    #         0.0,
+    #         Float64[1 0; 0 1; -1 0; 0 -1],
+    #         0.3 * ones(4)
+    # ))
     region_data
 end
 
@@ -162,7 +163,8 @@ optimizer_factory = with_optimizer(SCIP.Optimizer, limits_gap=0.05, limits_time=
 # optimizer_factory = with_optimizer(Gurobi.Optimizer)
 
 problem = CentroidalTrajectoryProblem(optimizer_factory, region_data, c0, ċ0, contacts0;
-    g=g, max_cop_distance=max_cop_distance, num_pieces=5, c_degree=3,
+    g=g, max_cop_distance=max_cop_distance, num_pieces=2, c_degree=3,
+    # objective_type=ObjectiveTypes.MIN_EXCURSION);
     objective_type=ObjectiveTypes.FEASIBILITY);
 
 disallow_jumping!(problem)
