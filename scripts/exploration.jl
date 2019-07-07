@@ -26,10 +26,14 @@ using CentroidalTrajOpt: extrude
 
 using RigidBodyDynamics
 using RigidBodyDynamics.Contact
+using MeshCat
+using MeshCatMechanisms
 using GeometryTypes: Point
 using QPWalkingControl
 using AtlasRobot
 using RigidBodySim
+
+using MeshCat: RGBA
 
 function create_atlas()
     urdf = AtlasRobot.urdfpath()
@@ -39,7 +43,9 @@ function create_atlas()
     # foot_polygons = make_foot_polygons(mechanism, sole_frames, foot_points; num_extreme_points=4);
     nominal_state = MechanismState(mechanism)
     AtlasRobot.setnominal!(nominal_state)
-    mechanism, nominal_state, foot_points, sole_frames
+    link_colors = Dict(map(body -> string(body) => RGBA(0.7f0, 0.7f0, 0.7f0, 0.3f0), bodies(mechanism)))
+    visuals = URDFVisuals(AtlasRobot.urdfpath(); package_path=[AtlasRobot.packagepath()], link_colors=link_colors)
+    mechanism, nominal_state, foot_points, sole_frames, visuals
 end
 
 function center_of_mass_velocity(state::MechanismState)
@@ -77,6 +83,10 @@ function create_contact_model(
         mechanism::Mechanism,
         foot_points::AbstractDict{BodyID, <:AbstractVector{<:Point3D}},
         region_data::Vector{<:ContactRegion})
+    contact_model = ContactModel()
+    normal_model = hunt_crossley_hertz(; k=500e3)
+    k_tangential = 20e3
+    b_tangential = 100.#2 * sqrt(k_tangential * mass(mechanism) / 10)
     world_frame = root_frame(mechanism)
     foot_collision_elements = CollisionElement[]
     for (bodyid, points) in foot_points
@@ -85,30 +95,24 @@ function create_contact_model(
             push!(foot_collision_elements, CollisionElement(body, point.frame, Point(point.v)))
         end
     end
-    environment = CollisionElement[]
+    push!(contact_model, foot_collision_elements)
     region_thickness = 0.2
     for (i, region) in enumerate(region_data)
         geometry = Mesh(polyhedron(extrude(hrep(region.A, region.b), region_thickness)))
         frame = CartesianFrame3D("region_$i")
         add_frame!(root_body(mechanism), Transform3D(frame, world_frame, region.transform))
         element = CollisionElement(root_body(mechanism), frame, geometry)
-        push!(environment, element)
+        group = CollisionElement[element]
+        push!(contact_model, group)
+        tangential_model = ViscoelasticCoulombModel(region.μ, k_tangential, b_tangential)
+        contact_force_model = SplitContactForceModel(normal_model, tangential_model)
+        set_contact_force_model!(contact_model, foot_collision_elements, group, contact_force_model)
     end
-    contact_model = ContactModel()
-    push!(contact_model, foot_collision_elements)
-    push!(contact_model, environment)
-    normal_model = hunt_crossley_hertz(; k=500e3)
-    # k_tangential = 20e3
-    # b_tangential = 2 * sqrt(k_tangential * mass(mechanism) / 10)
-    # tangential_model = ViscoelasticCoulombModel(0.8, k_tangential, b_tangential)
-    tangential_model = ViscoelasticCoulombModel(0.8, 20e3, 100.)
-    contact_force_model = SplitContactForceModel(normal_model, tangential_model)
-    set_contact_force_model!(contact_model, foot_collision_elements, environment, contact_force_model)
     return contact_model
 end
 
 ## Robot setup
-mechanism, state0, foot_points, sole_frames = create_atlas()
+mechanism, state0, foot_points, sole_frames, visuals = create_atlas()
 
 ## Environment
 region_data = create_environment()
@@ -120,16 +124,27 @@ contact_model = create_contact_model(mechanism, foot_points, region_data)
 c0 = center_of_mass(state0).v
 ċ0 = center_of_mass_velocity(state0).v
 contacts0 = map(values(sole_frames)) do sole_frame # TODO
-    region_data[1] => translation(transform_to_root(state0, sole_frame))
+    p0 = translation(transform_to_root(state0, sole_frame))
+    @assert norm(c0 - p0) <= 1.2 # TODO: integrate with kinematic limits
+    region_data[1] => p0
+end
+for i in eachindex(contacts0)
+    p_i_0 = last(contacts0[i])
+    for j in eachindex(contacts0)
+        p_j_0 = last(contacts0[j])
+        if i != j
+            @assert norm(p_i_0 - p_j_0) >= 0.1 # TODO: integrate with kinematic limits
+        end
+    end
 end
 
 # Additional settings
 g = mechanism.gravitational_acceleration.v
 max_cop_distance = 0.07
 
-# optimizer_factory = with_optimizer(SCIP.Optimizer, limits_gap=0.05, limits_time=10 * 60 * 60, display_verblevel=5,
-#     display_width=120, history_valuebased=true, lp_threads=10, branching_preferbinary=true, lp_scaling=false,
-#     branching_allfullstrong_priority=536870911, heuristics_multistart_freq=20, heuristics_multistart_onlynlps=false, heuristics_mpec_priority=536870911)#heuristics_subnlp_priority=536870911)#, nlp_solver="ipopt", heuristics_nlpdiving_priority=536870911)#,;
+optimizer_factory = with_optimizer(SCIP.Optimizer, limits_gap=0.05, limits_time=10 * 60 * 60, display_verblevel=5,
+    display_width=120, history_valuebased=true, lp_threads=10, branching_preferbinary=true, lp_scaling=false,
+    branching_allfullstrong_priority=536870911, heuristics_multistart_freq=20, heuristics_multistart_onlynlps=false, heuristics_mpec_priority=536870911)#heuristics_subnlp_priority=536870911)#, nlp_solver="ipopt", heuristics_nlpdiving_priority=536870911)#,;
 # optimizer_factory = with_optimizer(AmplNLWriter.Optimizer, "/home/twan/code/bonmin/Bonmin-1.8.7/build/bin/bonmin")
 # optimizer_factory = with_optimizer(AmplNLWriter.Optimizer, "/home/twan/code/couenne/couenne")
 # optimizer_factory = with_optimizer(Ipopt.Optimizer)
@@ -142,12 +157,13 @@ max_cop_distance = 0.07
 #     params[:feasibility_pump] = false
 #     with_optimizer(Juniper.Optimizer, params)
 # end
-optimizer_factory = with_optimizer(BARON.Optimizer;
-    threads=Sys.CPU_THREADS ÷ 2, MaxTime=10 * 60.0, PrTimeFreq=5., AllowFilterSD=1, AllowFilterSQP=1, AllowIpopt=1#=, NumLoc=20, LocRes=1=#)
+# optimizer_factory = with_optimizer(BARON.Optimizer;
+#     threads=Sys.CPU_THREADS ÷ 2, MaxTime=10 * 60.0, PrTimeFreq=5., AllowFilterSD=1, AllowFilterSQP=1, AllowIpopt=1#=, NumLoc=20, LocRes=1=#)
 # optimizer_factory = with_optimizer(Gurobi.Optimizer)
 
 problem = CentroidalTrajectoryProblem(optimizer_factory, region_data, c0, ċ0, contacts0;
-    g=g, max_cop_distance=max_cop_distance, num_pieces=5, c_degree=3, objective_type=ObjectiveTypes.FEASIBILITY);
+    g=g, max_cop_distance=max_cop_distance, num_pieces=5, c_degree=3,
+    objective_type=ObjectiveTypes.FEASIBILITY);
 
 disallow_jumping!(problem)
 
@@ -172,7 +188,6 @@ end
 
 ## Environment visualization
 using MeshCat
-using LoopThrottle
 newvis = false
 if newvis || (!@isdefined vis) || isempty(vis.core.scope.pool.connections)
     vis = Visualizer()
@@ -182,10 +197,13 @@ end
 delete!(vis)
 cvis = CentroidalTrajectoryVisualizer(vis, region_data, norm(g), length(contacts0))
 set_objects!(cvis)
-sleep(0.1)
+
+## Robot visualization
+mvis = MechanismVisualizer(mechanism, visuals, vis)
+copyto!(mvis, state0)
 
 ## Feasibility
-result = solve!(problem);
+result = CentroidalTrajOpt.solve!(problem);
 
 ## Result visualization
 set_com_trajectory!(cvis, result)
@@ -288,6 +306,7 @@ end
 
 ## Visualization
 setanimation!(cvis, result);
+# using LoopThrottle
 # let
 #     T = last(result.break_times)
 #     max_rate = 1 / 2
