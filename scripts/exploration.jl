@@ -42,6 +42,11 @@ function create_atlas()
     mechanism, nominal_state, foot_points, sole_frames
 end
 
+function center_of_mass_velocity(state::MechanismState)
+    h = momentum(state)
+    FreeVector3D(h.frame, linear(h)) / mass(state.mechanism)
+end
+
 function create_environment()
     region_data = ContactRegion{Float64}[]
     push!(region_data, ContactRegion(
@@ -51,7 +56,6 @@ function create_environment()
             Float64[1 0; 0 1; -1 0; 0 -1],
             0.2 * ones(4)
     ))
-
     push!(region_data, ContactRegion(
             AffineMap(one(RotMatrix{3}) * RotXYZ(0.1, -0.2, 0.3), SVector(1.0, 0.3, 0.2)),
             0.7,
@@ -59,7 +63,6 @@ function create_environment()
             Float64[1 0; 0 1; -1 0; 0 -1],
             0.4 * ones(4)
     ))
-
     push!(region_data, ContactRegion(
             AffineMap(one(RotMatrix{3}) * RotXYZ(0.1, -0.2, 0.3), SVector(0.0, 1.0, 0.2)),
             0.7,
@@ -105,7 +108,7 @@ function create_contact_model(
 end
 
 ## Robot setup
-mechanism, nominal_state, foot_points, sole_frames = create_atlas()
+mechanism, state0, foot_points, sole_frames = create_atlas()
 
 ## Environment
 region_data = create_environment()
@@ -114,13 +117,11 @@ region_data = create_environment()
 contact_model = create_contact_model(mechanism, foot_points, region_data)
 
 ## Initial conditions
-c0 = SVector(-0.05, 0.05, 1.0)
-ċ0 = SVector(0.5, 0.4, 0.0)
-# ċ0 = SVector(0.05, 0.0, 0.0)
-contacts0 = [
-    region_data[1] => SVector(0.0, 0.15, 0.0),
-    region_data[1] => SVector(0.0, -0.15, 0.0),
-];
+c0 = center_of_mass(state0).v
+ċ0 = center_of_mass_velocity(state0).v
+contacts0 = map(values(sole_frames)) do sole_frame # TODO
+    region_data[1] => translation(transform_to_root(state0, sole_frame))
+end
 
 # Additional settings
 g = mechanism.gravitational_acceleration.v
