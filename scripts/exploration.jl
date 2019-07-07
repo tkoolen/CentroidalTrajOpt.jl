@@ -162,8 +162,30 @@ optimizer_factory = with_optimizer(SCIP.Optimizer, limits_gap=0.05, limits_time=
 #     threads=Sys.CPU_THREADS ÷ 2, MaxTime=10 * 60.0, PrTimeFreq=5., AllowFilterSD=1, AllowFilterSQP=1, AllowIpopt=1#=, NumLoc=20, LocRes=1=#)
 # optimizer_factory = with_optimizer(Gurobi.Optimizer)
 
+# https://www.ibm.com/support/knowledgecenter/en/SSSA5P_12.9.0/ilog.odms.cplex.help/CPLEX/Parameters/topics/OptimalityTarget.html
+
+# Parameters tried:
+# CPX_PARAM_OPTIMALITYTARGET = 2: CPX_OPTIMALITYTARGET_FIRSTORDER - not available for MIP
+# CPX_PARAM_FPHEUR = 1 - not available for MIQCP
+# CPX_PARAM_DEPIND = 3 # dependency checking: turn on at beginning and at end of preprocessing
+# CPX_PARAM_MIQCPSTRAT = 1 - solve QCPs as subproblems
+# CPXPARAM_MIP_Cuts_LiftProj = 3 - Generate lift-and-project cuts very aggressively
+# CPX_PARAM_MIPEMPHASIS = CPLEX.CPX_MIPEMPHASIS_HIDDENFEAS - applies considerable additional effort toward finding high quality feasible solutions that are difficult to locate
+
+# Parameters to try:
+# CPXPARAM_MIP_Cuts_LiftProj
+# CPX_PARAM_MIQCPSTRAT
+# CPX_MIPEMPHASIS_FEASIBILITY
+# CPX_PARAM_TILIM=120
+# barrier-related options
+# optimizer_factory = with_optimizer(CPLEX.Optimizer,
+#     CPX_PARAM_OPTIMALITYTARGET = CPLEX.CPX_OPTIMALITYTARGET_AUTO,
+#     CPX_PARAM_DEPIND = 3,
+#     CPXPARAM_MIP_Cuts_LiftProj = 3,
+#     CPX_PARAM_MIPEMPHASIS=CPLEX.CPX_MIPEMPHASIS_FEASIBILITY)
+
 problem = CentroidalTrajectoryProblem(optimizer_factory, region_data, c0, ċ0, contacts0;
-    g=g, max_cop_distance=max_cop_distance, num_pieces=2, c_degree=3,
+    g=g, max_cop_distance=max_cop_distance, num_pieces=5, c_degree=3,
     # objective_type=ObjectiveTypes.MIN_EXCURSION);
     objective_type=ObjectiveTypes.FEASIBILITY);
 
