@@ -20,7 +20,9 @@ version = "0.1.0"
 
 [[AtlasRobot]]
 deps = ["RigidBodyDynamics", "StaticArrays"]
-git-tree-sha1 = "28973c2f700c33e0f5521b0a7489c89ba7bc01c8"
+git-tree-sha1 = "668529bea4e1478fea9394e25b5ba079b626544f"
+repo-rev = "tk/develop"
+repo-url = "https://github.com/tkoolen/AtlasRobot.jl.git"
 uuid = "436ed74b-f7b6-57fe-bd82-efdbd6c0ab0c"
 version = "0.4.0"
 
@@ -651,9 +653,7 @@ version = "0.1.0"
 
 [[QPWalkingControl]]
 deps = ["AtlasRobot", "Blink", "CoordinateTransformations", "EnhancedGJK", "GeometryTypes", "Interact", "InteractBase", "LightXML", "LinearAlgebra", "MathOptInterface", "MechanismGeometries", "MeshCat", "MeshCatMechanisms", "NamedColors", "OSQP", "Observables", "Parametron", "PlanarConvexHulls", "QPControl", "RigidBodyDynamics", "RigidBodySim", "Rotations", "StaticArrays", "StaticUnivariatePolynomials", "Test", "WebIO"]
-git-tree-sha1 = "f61e29053cce6ada52223ddcc1cd3152cac74f4e"
-repo-rev = "tk/develop"
-repo-url = "https://github.com/tkoolen/QPWalkingControl.jl.git"
+path = "/home/twan/.julia/dev/QPWalkingControl"
 uuid = "0b169a85-4a4a-588b-8c74-4a8044adc824"
 version = "0.1.0"
 
@@ -707,14 +707,16 @@ uuid = "ae029012-a4dd-5104-9daa-d747884805df"
 version = "0.5.2"
 
 [[RigidBodyDynamics]]
-deps = ["DocStringExtensions", "LightXML", "LinearAlgebra", "LoopThrottle", "Random", "Reexport", "Rotations", "SparseArrays", "StaticArrays", "TypeSortedCollections", "UnsafeArrays"]
-git-tree-sha1 = "8280c2e617f1872ab13bb9d077b83fa32b9659d4"
+deps = ["CoordinateTransformations", "DocStringExtensions", "EnhancedGJK", "GeometryTypes", "LightXML", "LinearAlgebra", "LoopThrottle", "Random", "Reexport", "Rotations", "SparseArrays", "StaticArrays", "TypeSortedCollections", "UnsafeArrays"]
+path = "/home/twan/.julia/dev/RigidBodyDynamics"
 uuid = "366cf18f-59d5-5db9-a4de-86a9f6786172"
 version = "2.1.0"
 
 [[RigidBodySim]]
-deps = ["Blink", "DataStructures", "DiffEqBase", "DiffEqCallbacks", "DiffEqDiffTools", "DocStringExtensions", "InteractBase", "MeshCatMechanisms", "Observables", "OrdinaryDiffEq", "Printf", "RigidBodyDynamics", "WebIO"]
-git-tree-sha1 = "7557c9426fcc8894161b5cdaf7cd9a780151b7da"
+deps = ["Blink", "DataStructures", "DiffEqBase", "DiffEqCallbacks", "DocStringExtensions", "InteractBase", "MeshCatMechanisms", "Observables", "OrdinaryDiffEq", "Printf", "RigidBodyDynamics", "WebIO"]
+git-tree-sha1 = "4053236c9c43d7a183777e39186db03bd0e53efa"
+repo-rev = "tk/develop"
+repo-url = "https://github.com/JuliaRobotics/RigidBodySim.jl.git"
 uuid = "e61f16d8-a6b7-5689-8d03-627c2b27ebce"
 version = "1.3.0"
 

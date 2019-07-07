@@ -6,9 +6,7 @@
 # * better CoM kinematic constraints
 # * Initial condition modification
 
-using Pkg
-Pkg.activate(@__DIR__)
-
+## Packages
 using CentroidalTrajOpt
 using LinearAlgebra
 using AmplNLWriter
@@ -23,33 +21,99 @@ using JuMP
 using Rotations
 using MultilinearOpt
 
-# Environment setup
-region_data = ContactRegion{Float64}[]
-push!(region_data, ContactRegion(
-        AffineMap(one(RotMatrix{3}), zero(SVector{3})),
-        0.7,
-        0.0,
-        Float64[1 0; 0 1; -1 0; 0 -1],
-        0.2 * ones(4)
-))
+using Polyhedra: hrep, Mesh, polyhedron
+using CentroidalTrajOpt: extrude
 
-push!(region_data, ContactRegion(
-        AffineMap(one(RotMatrix{3}) * RotXYZ(0.1, -0.2, 0.3), SVector(1.0, 0.3, 0.2)),
-        0.7,
-        0.0,
-        Float64[1 0; 0 1; -1 0; 0 -1],
-        0.4 * ones(4)
-))
+using RigidBodyDynamics
+using RigidBodyDynamics.Contact
+using GeometryTypes: Point
+using QPWalkingControl
+using AtlasRobot
+using RigidBodySim
 
-push!(region_data, ContactRegion(
-        AffineMap(one(RotMatrix{3}) * RotXYZ(0.1, -0.2, 0.3), SVector(0.0, 1.0, 0.2)),
-        0.7,
-        0.0,
-        Float64[1 0; 0 1; -1 0; 0 -1],
-        0.3 * ones(4)
-))
+function create_atlas()
+    urdf = AtlasRobot.urdfpath()
+    mechanism = parse_urdf(urdf, floating=true)
+    foot_points = AtlasRobot.foot_contact_points(mechanism)
+    sole_frames = AtlasRobot.add_sole_frames!(mechanism)
+    # foot_polygons = make_foot_polygons(mechanism, sole_frames, foot_points; num_extreme_points=4);
+    nominal_state = MechanismState(mechanism)
+    AtlasRobot.setnominal!(nominal_state)
+    mechanism, nominal_state, foot_points, sole_frames
+end
 
-# Initial conditions
+function create_environment()
+    region_data = ContactRegion{Float64}[]
+    push!(region_data, ContactRegion(
+            AffineMap(one(RotMatrix{3}), zero(SVector{3})),
+            0.7,
+            0.0,
+            Float64[1 0; 0 1; -1 0; 0 -1],
+            0.2 * ones(4)
+    ))
+
+    push!(region_data, ContactRegion(
+            AffineMap(one(RotMatrix{3}) * RotXYZ(0.1, -0.2, 0.3), SVector(1.0, 0.3, 0.2)),
+            0.7,
+            0.0,
+            Float64[1 0; 0 1; -1 0; 0 -1],
+            0.4 * ones(4)
+    ))
+
+    push!(region_data, ContactRegion(
+            AffineMap(one(RotMatrix{3}) * RotXYZ(0.1, -0.2, 0.3), SVector(0.0, 1.0, 0.2)),
+            0.7,
+            0.0,
+            Float64[1 0; 0 1; -1 0; 0 -1],
+            0.3 * ones(4)
+    ))
+    region_data
+end
+
+function create_contact_model(
+        mechanism::Mechanism,
+        foot_points::AbstractDict{BodyID, <:AbstractVector{<:Point3D}},
+        region_data::Vector{<:ContactRegion})
+    world_frame = root_frame(mechanism)
+    foot_collision_elements = CollisionElement[]
+    for (bodyid, points) in foot_points
+        body = findbody(mechanism, bodyid)
+        for point in points
+            push!(foot_collision_elements, CollisionElement(body, point.frame, Point(point.v)))
+        end
+    end
+    environment = CollisionElement[]
+    region_thickness = 0.2
+    for (i, region) in enumerate(region_data)
+        geometry = Mesh(polyhedron(extrude(hrep(region.A, region.b), region_thickness)))
+        frame = CartesianFrame3D("region_$i")
+        add_frame!(root_body(mechanism), Transform3D(frame, world_frame, region.transform))
+        element = CollisionElement(root_body(mechanism), frame, geometry)
+        push!(environment, element)
+    end
+    contact_model = ContactModel()
+    push!(contact_model, foot_collision_elements)
+    push!(contact_model, environment)
+    normal_model = hunt_crossley_hertz(; k=500e3)
+    # k_tangential = 20e3
+    # b_tangential = 2 * sqrt(k_tangential * mass(mechanism) / 10)
+    # tangential_model = ViscoelasticCoulombModel(0.8, k_tangential, b_tangential)
+    tangential_model = ViscoelasticCoulombModel(0.8, 20e3, 100.)
+    contact_force_model = SplitContactForceModel(normal_model, tangential_model)
+    set_contact_force_model!(contact_model, foot_collision_elements, environment, contact_force_model)
+    return contact_model
+end
+
+## Robot setup
+mechanism, nominal_state, foot_points, sole_frames = create_atlas()
+
+## Environment
+region_data = create_environment()
+
+## Collision setup
+contact_model = create_contact_model(mechanism, foot_points, region_data)
+
+## Initial conditions
 c0 = SVector(-0.05, 0.05, 1.0)
 ċ0 = SVector(0.5, 0.4, 0.0)
 # ċ0 = SVector(0.05, 0.0, 0.0)
@@ -59,7 +123,7 @@ contacts0 = [
 ];
 
 # Additional settings
-g = SVector(0.0, 0.0, -9.81);
+g = mechanism.gravitational_acceleration.v
 max_cop_distance = 0.07
 
 # optimizer_factory = with_optimizer(SCIP.Optimizer, limits_gap=0.05, limits_time=10 * 60 * 60, display_verblevel=5,
@@ -105,7 +169,7 @@ if relax
     relaxbilinear!(problem.model, method=:Logarithmic1D, disc_level=17, constraints_to_skip=problem.friction_cone_quadratic_constraints)
 end
 
-## Visualization
+## Environment visualization
 using MeshCat
 using LoopThrottle
 newvis = false
@@ -121,6 +185,10 @@ sleep(0.1)
 
 ## Feasibility
 result = solve!(problem);
+
+## Result visualization
+set_com_trajectory!(cvis, result)
+set_state!(cvis, result, 0.0)
 
 if backend(problem.model).optimizer.model isa SCIP.Optimizer
     mscip = backend(problem.model).optimizer.model.mscip
@@ -216,10 +284,6 @@ for t in result.break_times
     @test c(t - 1e-8) ≈ c(t + 1e-8) atol=1e-5
     @test ċ(t - 1e-8) ≈ ċ(t + 1e-8) atol=1e-5
 end
-
-## Initial state
-set_com_trajectory!(cvis, result)
-set_state!(cvis, result, 0.0)
 
 ## Visualization
 setanimation!(cvis, result);

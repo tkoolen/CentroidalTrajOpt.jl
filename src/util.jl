@@ -68,6 +68,16 @@ function constrain_l1_norm(model::JuMP.Model, x::AbstractVector{<:JuMP.AbstractJ
     model
 end
 
+# Geometry utilities
+function extrude(polyhedron::Polyhedra.HRepresentation, thickness::Number)
+    A = polyhedron.A
+    b = polyhedron.b
+    n = size(A, 1)
+    Ā = [A zeros(n, 1); 0 0 1; 0 0 -1]
+    b̄ = [b; 0; thickness]
+    hrep(Ā, b̄, polyhedron.linset)
+end
+
 # scrap
 # function poly(model::JuMP.Model, namefunc, degree::Union{Integer, Val})
 #     Polynomial(ntuple(j -> @variable(model, base_name=namefunc(j)), degree + 1))

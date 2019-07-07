@@ -36,9 +36,9 @@ function set_objects!(vis::CentroidalTrajectoryVisualizer)
     end
 
     # CoM
-    # img = PngImage(joinpath(@__DIR__, "..", "assets", "ps-neutral.png"))
-    # com_material = MeshLambertMaterial(map=Texture(image=img))#, wrap=(1, 1), repeat=(1, 1)))
-    setobject!(vis.com_visualizer, HyperSphere(Point(0., 0, 0), 0.05))#, com_material)
+    img = PngImage(joinpath(@__DIR__, "..", "assets", "checkerboard.png"))
+    com_material = MeshBasicMaterial(map=Texture(image=img))#, wrap=(1, 1), repeat=(1, 1)))
+    setobject!(vis.com_visualizer, HyperSphere(Point(0., 0, 0), 0.05), com_material)
     setvisible!(vis.com_visualizer, false)
 
     # Forces / contact force cones
@@ -117,7 +117,7 @@ function MeshCat.setanimation!(cvis::CentroidalTrajectoryVisualizer,
     t0 = first(result.break_times)
     tf = last(result.break_times)
     num_frames = floor(Int, (tf - t0) * fps)
-    for frame in 0:num_frames
+    for frame in 0 : num_frames
         t = t0 + frame / fps
         atframe(animation, cvis.vis, frame) do frame_vis
             frame_cvis = CentroidalTrajectoryVisualizer(frame_vis, cvis.region_data, cvis.gravity_mag, length(cvis.force_visualizers))
