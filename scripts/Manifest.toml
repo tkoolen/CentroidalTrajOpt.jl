@@ -56,16 +56,19 @@ uuid = "9e28174c-4ba2-5203-b857-d8d62c4213ee"
 version = "0.8.10"
 
 [[BinaryProvider]]
-deps = ["Libdl", "Logging", "SHA"]
-git-tree-sha1 = "8153fd64131cd00a79544bb23788877741f627bb"
+deps = ["Libdl", "SHA"]
+git-tree-sha1 = "c7361ce8a2129f20b0e05a89f7070820cfed6648"
+pinned = true
 uuid = "b99e7846-7c00-51b0-8f62-c81ae34c0232"
-version = "0.5.5"
+version = "0.5.4"
 
 [[Blink]]
-deps = ["Base64", "BinDeps", "Distributed", "JSExpr", "JSON", "Lazy", "Libdl", "Logging", "MacroTools", "Mustache", "Mux", "Reexport", "Sockets", "Test", "WebIO", "WebSockets"]
-git-tree-sha1 = "5b0ca771f6e59bbba820888af8a6edbcc62bc86a"
+deps = ["Base64", "BinDeps", "Distributed", "JSExpr", "JSON", "Lazy", "Logging", "MacroTools", "Mustache", "Mux", "Reexport", "Sockets", "Test", "WebIO", "WebSockets"]
+git-tree-sha1 = "25a9fe331a8e2345e505dccf8c178cc34987906b"
+repo-rev = "master"
+repo-url = "https://github.com/JunoLab/Blink.jl.git"
 uuid = "ad839575-38b3-5650-b840-f874b8c74a25"
-version = "0.10.1"
+version = "0.10.1+"
 
 [[CEnum]]
 deps = ["Test"]
@@ -455,11 +458,9 @@ version = "0.3.0"
 
 [[MeshCat]]
 deps = ["AssetRegistry", "Base64", "BinDeps", "Colors", "CoordinateTransformations", "DocStringExtensions", "GeometryTypes", "JSExpr", "LinearAlgebra", "MsgPack", "Mux", "Parameters", "Requires", "Rotations", "Sockets", "StaticArrays", "UUIDs", "WebIO"]
-git-tree-sha1 = "33225b15b2eb74c8ed248c8c0382db29f214cbf0"
-repo-rev = "master"
-repo-url = "https://github.com/rdeits/MeshCat.jl.git"
+git-tree-sha1 = "e83e4c9d3c881990b5d41cbfd79c9e731f80d95b"
 uuid = "283c5d60-a78f-5afe-a0af-af636b173e11"
-version = "0.6.0"
+version = "0.7.0"
 
 [[MeshCatMechanisms]]
 deps = ["ColorTypes", "CoordinateTransformations", "GeometryTypes", "InteractBase", "Interpolations", "LoopThrottle", "MechanismGeometries", "MeshCat", "OrderedCollections", "RigidBodyDynamics"]
@@ -581,11 +582,9 @@ version = "0.10.3"
 
 [[Parametron]]
 deps = ["DocStringExtensions", "FunctionWrappers", "LinearAlgebra", "MacroTools", "MathOptInterface"]
-git-tree-sha1 = "16561a45cf643ba94fb9ded8d5e1d80db5cc9a6e"
-repo-rev = "master"
-repo-url = "https://github.com/tkoolen/Parametron.jl.git"
+git-tree-sha1 = "c514fb32253215ed36e72cce93a343b0ba282806"
 uuid = "41fac6d6-0ffa-5bcc-b863-17dd4947be41"
-version = "0.9.0"
+version = "0.9.1"
 
 [[Pidfile]]
 deps = ["FileWatching", "Test"]
@@ -594,12 +593,12 @@ uuid = "fa939f87-e72e-5be4-a000-7fc836dbe307"
 version = "1.1.0"
 
 [[PiecewiseLinearOpt]]
-deps = ["JuMP", "LinearAlgebra", "MathOptInterface", "Random", "Test"]
-git-tree-sha1 = "6905563e6cc2b18f1abb326d73742480b6f1b6d7"
+deps = ["JuMP", "LinearAlgebra", "MathOptInterface", "Random"]
+git-tree-sha1 = "8384faf3615ee5abaa9861f6d3a61674537e83d9"
 repo-rev = "master"
 repo-url = "git@github.com:joehuchette/PiecewiseLinearOpt.jl.git"
 uuid = "0f51c51e-adfa-5141-8a04-d40246b8977c"
-version = "0.2.1+"
+version = "0.2.1"
 
 [[Pkg]]
 deps = ["Dates", "LibGit2", "Markdown", "Printf", "REPL", "Random", "SHA", "UUIDs"]
@@ -625,9 +624,9 @@ version = "0.5.8"
 
 [[Plots]]
 deps = ["Base64", "Contour", "Dates", "FixedPointNumbers", "GR", "GeometryTypes", "JSON", "LinearAlgebra", "Measures", "NaNMath", "Pkg", "PlotThemes", "PlotUtils", "Printf", "REPL", "Random", "RecipesBase", "Reexport", "Requires", "Showoff", "SparseArrays", "Statistics", "StatsBase", "UUIDs"]
-git-tree-sha1 = "c446e51959578de01b5a4efa72ca6f2460e38196"
+git-tree-sha1 = "a9c011a7176a9010dda4853373e8d89a83f9d69d"
 uuid = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
-version = "0.25.1"
+version = "0.25.3"
 
 [[Polyhedra]]
 deps = ["GeometryTypes", "JuMP", "LinearAlgebra", "ParameterJuMP", "RecipesBase", "SparseArrays", "StaticArrays"]

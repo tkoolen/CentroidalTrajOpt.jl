@@ -11,7 +11,7 @@ using CentroidalTrajOpt
 using LinearAlgebra
 
 using MultilinearOpt
-using Polyhedra: hrep, Mesh, polyhedron
+using Polyhedra: hrep, polyhedron
 using CentroidalTrajOpt: extrude
 
 using RigidBodyDynamics
@@ -246,8 +246,8 @@ end
 # result = solve!(problem);
 
 if optimizer_factory.constructor == BARON.Optimizer
-    @show backend(problem.model).optimizer.model.optimizer.inner.problem_file_name
-    @show backend(problem.model).optimizer.model.optimizer.inner.result_file_name
+    @info "BARON problem file: $(backend(problem.model).optimizer.model.optimizer.inner.problem_file_name)"
+    @info "BARON result file: $(backend(problem.model).optimizer.model.optimizer.inner.result_file_name)"
 end
 
 ## Tests
