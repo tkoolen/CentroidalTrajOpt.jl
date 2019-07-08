@@ -36,7 +36,10 @@ using MeshCat: RGBA
 
 function create_atlas()
     urdf = AtlasRobot.urdfpath()
-    mechanism = parse_urdf(urdf, floating=true)
+    mechanism = parse_urdf(urdf, floating=true, remove_fixed_tree_joints=false)
+    link_colors = Dict(map(body -> string(body) => RGBA(0.7f0, 0.7f0, 0.7f0, 0.3f0), bodies(mechanism)))
+    visuals = URDFVisuals(AtlasRobot.urdfpath(); package_path=[AtlasRobot.packagepath()], link_colors=link_colors)
+    remove_fixed_tree_joints!(mechanism)
     foot_points = AtlasRobot.foot_contact_points(mechanism)
     sole_frames = AtlasRobot.add_sole_frames!(mechanism)
     # foot_polygons = make_foot_polygons(mechanism, sole_frames, foot_points; num_extreme_points=4);
@@ -44,8 +47,6 @@ function create_atlas()
     AtlasRobot.setnominal!(nominal_state)
     floating_joint = first(joints(mechanism))
     configuration(nominal_state, floating_joint)[end] += -0.0028061189941; # FIXME
-    link_colors = Dict(map(body -> string(body) => RGBA(0.7f0, 0.7f0, 0.7f0, 0.3f0), bodies(mechanism)))
-    visuals = URDFVisuals(AtlasRobot.urdfpath(); package_path=[AtlasRobot.packagepath()], link_colors=link_colors)
     mechanism, nominal_state, foot_points, sole_frames, visuals
 end
 
