@@ -17,7 +17,7 @@ using CentroidalTrajOpt: extrude
 using RigidBodyDynamics
 using RigidBodyDynamics.Contact
 using MeshCatMechanisms
-using GeometryTypes: Point
+using GeometryTypes: Point, GLNormalMesh
 using QPControl
 using QPWalkingControl
 using AtlasRobot
@@ -95,7 +95,7 @@ function create_contact_model(
     push!(contact_model, foot_collision_elements)
     region_thickness = 0.2
     for (i, region) in enumerate(region_data)
-        geometry = Mesh(polyhedron(extrude(hrep(region.A, region.b), region_thickness)))
+        geometry = GLNormalMesh(polyhedron(extrude(hrep(region.A, region.b), region_thickness)))
         frame = CartesianFrame3D("region_$i")
         add_frame!(root_body(mechanism), Transform3D(frame, world_frame, region.transform))
         element = CollisionElement(root_body(mechanism), frame, geometry)
@@ -136,17 +136,18 @@ function create_controller(
     icptraj = let
         optimizer = OSQP.Optimizer(verbose=false, eps_abs=1e-6, eps_rel=1e-8, max_iter=10000, adaptive_rho_interval=25)
         max_polygon_sides = 6 # TODO
-        num_segments = 15
+        num_segments = 1
         ICPTrajectoryGenerator{Float64, max_polygon_sides}(optimizer, num_segments, ω)
     end
     linear_momentum_controller = ICPController(mechanism, icptraj, zdes)
+    QPWalkingControl.transfer_weight!(icptraj, state0, foot_polygons, first(keys(foot_points)); Δt = 1.0)
 
     # State machine. TODO: replace
     statemachine = let
         contacts = Dict(BodyID(body) => contact for (body, contact) in lowlevel.contacts)
         ICPWalkingStateMachine(mechanism, contacts, icptraj)
     end
-    # QPWalkingControl.init_footstep_plan!(statemachine, nominal_state, foot_polygons);
+    QPWalkingControl.init_footstep_plan!(statemachine, nominal_state, foot_polygons);
 
     # High level controller
     HumanoidQPController(lowlevel, pelvis, nominal_state,
@@ -337,7 +338,7 @@ for t in result.break_times
     @test ċ(t - 1e-8) ≈ ċ(t + 1e-8) atol=1e-5
 end
 
-## Visualization
+## Plan Visualization
 setanimation!(cvis, result);
 # using LoopThrottle
 # let
@@ -355,3 +356,27 @@ setanimation!(cvis, result);
 
 ## Mode sequence
 # value.(problem.z_vars)
+
+## Simulation
+gui = GUI(mvis);
+open(gui)
+
+state = MechanismState(mechanism)
+copyto!(state, state0)
+Δt = 1 / 500
+pcontroller = PeriodicController(similar(velocity(state)), Δt, controller)
+damping = JointDamping{Float64}(mechanism, AtlasRobot.urdfpath())
+dynamics = Dynamics(
+    mechanism,
+    SumController(similar(velocity(state)), (pcontroller, damping));
+    contact_model=contact_model)
+callback = CallbackSet(RealtimeRateLimiter(poll_interval=pi / 100), CallbackSet(gui; max_fps=60))
+# callback = CallbackSet(gui; max_fps=30)
+tspan = (0., 18.)
+contact_state = SoftContactState(contact_model)
+problem = ODEProblem(dynamics, (state, contact_state), tspan)#; callback=callback)
+
+# simulate
+QPWalkingControl.init_footstep_plan!(controller.statemachine, state0, foot_polygons);
+@time sol = RigidBodySim.solve(problem, Tsit5(), abs_tol = 1e-8, dt = 1e-6)#, dtmax=1e-3);
+setanimation!(mvis, sol)
