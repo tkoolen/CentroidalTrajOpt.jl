@@ -15,6 +15,7 @@ using Polyhedra: hrep, Mesh, polyhedron
 using CentroidalTrajOpt: extrude
 
 using RigidBodyDynamics
+using RigidBodyDynamics.PDControl
 using RigidBodyDynamics.Contact
 using MeshCatMechanisms
 using GeometryTypes: Point, GLNormalMesh
@@ -114,9 +115,10 @@ function create_controller(
         foot_points::AbstractDict{BodyID, <:AbstractVector{<:Point3D}},
         μ::Number,
         pelvis::RigidBody,
-        nominal_state::MechanismState, # TODO: remove
-        foot_polygons # TODO: remove
+        nominal_state::MechanismState,
+        com_trajectory,
     )
+    # Low level controller
     optimizer = OSQP.Optimizer(verbose=false, eps_abs=1e-5, eps_rel=1e-5, max_iter=5000, adaptive_rho_interval=25)
     lowlevel = MomentumBasedController{4}(mechanism, optimizer, floatingjoint = floating_joint);
     for (bodyid, points) in foot_points
@@ -129,29 +131,17 @@ function create_controller(
         end
     end
 
-    # Linear momentum controller. TODO: remove ICP stuff, replace with CoM PD.
-    zdes = center_of_mass(nominal_state).v[3] - 0.05
-    gz = norm(mechanism.gravitational_acceleration)
-    ω = sqrt(gz / zdes)
-    icptraj = let
-        optimizer = OSQP.Optimizer(verbose=false, eps_abs=1e-6, eps_rel=1e-8, max_iter=10000, adaptive_rho_interval=25)
-        max_polygon_sides = 6 # TODO
-        num_segments = 1
-        ICPTrajectoryGenerator{Float64, max_polygon_sides}(optimizer, num_segments, ω)
-    end
-    linear_momentum_controller = ICPController(mechanism, icptraj, zdes)
-    QPWalkingControl.transfer_weight!(icptraj, state0, foot_polygons, first(keys(foot_points)); Δt = 1.0)
+    # Linear momentum controller
+    com_gains = PDGains(100.0, 20.0)
+    linear_momentum_controller = PDCoMController(com_gains, com_trajectory, mass(mechanism))
 
-    # State machine. TODO: replace
-    statemachine = let
-        contacts = Dict(BodyID(body) => contact for (body, contact) in lowlevel.contacts)
-        ICPWalkingStateMachine(mechanism, contacts, icptraj)
-    end
-    QPWalkingControl.init_footstep_plan!(statemachine, nominal_state, foot_polygons);
+    # State machine
+    contacts = Dict(BodyID(body) => contact for (body, contact) in lowlevel.contacts)
+    state_machine = CoMTrackingStateMachine(mechanism, contacts)
 
     # High level controller
     HumanoidQPController(lowlevel, pelvis, nominal_state,
-        statemachine, collect(values(statemachine.end_effector_controllers)), linear_momentum_controller)
+        state_machine, collect(values(state_machine.end_effector_controllers)), linear_momentum_controller)
 end
 
 ## Robot setup
@@ -162,10 +152,6 @@ region_data = create_environment()
 
 ## Collision setup
 contact_model = create_contact_model(mechanism, foot_points, region_data)
-
-## Controller
-foot_polygons = make_foot_polygons(mechanism, sole_frames, foot_points; num_extreme_points=4);
-controller = create_controller(mechanism, floating_joint, foot_points, 0.7, pelvis, state0, foot_polygons);
 
 ## Initial conditions
 c0 = center_of_mass(state0).v
@@ -217,6 +203,7 @@ end
 
 relax = optimizer_factory.constructor == Gurobi.Optimizer || optimizer_factory.constructor == CPLEX.Optimizer
 if relax
+    @info "Relaxing bilinearities."
     relaxbilinear!(problem.model, method=:Logarithmic1D, disc_level=17, constraints_to_skip=problem.friction_cone_quadratic_constraints)
 end
 
@@ -337,7 +324,7 @@ for t in result.break_times
     @test c(t - 1e-8) ≈ c(t + 1e-8) atol=1e-5
     @test ċ(t - 1e-8) ≈ ċ(t + 1e-8) atol=1e-5
 end
-
+## Plan Visualization
 ## Plan Visualization
 setanimation!(cvis, result);
 # using LoopThrottle
@@ -357,6 +344,10 @@ setanimation!(cvis, result);
 ## Mode sequence
 # value.(problem.z_vars)
 
+## Controller
+μ_control = 0.7
+controller = create_controller(mechanism, floating_joint, foot_points, μ_control, pelvis, state0, result.center_of_mass);
+
 ## Simulation
 gui = GUI(mvis);
 open(gui)
@@ -374,9 +365,17 @@ callback = CallbackSet(RealtimeRateLimiter(poll_interval=pi / 100), CallbackSet(
 # callback = CallbackSet(gui; max_fps=30)
 tspan = (0., 18.)
 contact_state = SoftContactState(contact_model)
-problem = ODEProblem(dynamics, (state, contact_state), tspan)#; callback=callback)
+odeproblem = ODEProblem(dynamics, (state, contact_state), tspan)#; callback=callback)
+
+# # TODO: move somewhere else
+# using StaticUnivariatePolynomials
+# const SUP = StaticUnivariatePolynomials
+# function (p::SUP.Polynomial)(x, ::Val{2})
+#     pd = SUP.derivative(p)
+#     pdd = SUP.derivative(pd)
+#     p(x), pd(x), pdd(x)
+# end
 
 # simulate
-QPWalkingControl.init_footstep_plan!(controller.statemachine, state0, foot_polygons);
-@time sol = RigidBodySim.solve(problem, Tsit5(), abs_tol = 1e-8, dt = 1e-6)#, dtmax=1e-3);
+@time sol = RigidBodySim.solve(odeproblem, Tsit5(), abs_tol = 1e-8, dt = 1e-6)#, dtmax=1e-3);
 setanimation!(mvis, sol)
