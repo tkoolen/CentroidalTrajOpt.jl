@@ -9,18 +9,8 @@
 ## Packages
 using CentroidalTrajOpt
 using LinearAlgebra
-using AmplNLWriter
-using Ipopt
-using SCIP
-using BARON
-# using Alpine
-# using Juniper
-using CPLEX
-using Gurobi
-using JuMP
-using Rotations
-using MultilinearOpt
 
+using MultilinearOpt
 using Polyhedra: hrep, Mesh, polyhedron
 using CentroidalTrajOpt: extrude
 
@@ -28,26 +18,31 @@ using RigidBodyDynamics
 using RigidBodyDynamics.Contact
 using MeshCatMechanisms
 using GeometryTypes: Point
+using QPControl
 using QPWalkingControl
 using AtlasRobot
 using RigidBodySim
+using Rotations
+using OSQP
 
 using MeshCat: RGBA
+
+include("optimizers.jl")
 
 function create_atlas()
     urdf = AtlasRobot.urdfpath()
     mechanism = parse_urdf(urdf, floating=true, remove_fixed_tree_joints=false)
-    link_colors = Dict(map(body -> string(body) => RGBA(0.7f0, 0.7f0, 0.7f0, 0.3f0), bodies(mechanism)))
+    link_colors = Dict(map(body -> string(body) => RGBA(0.7f0, 0.7f0, 0.7f0, 0.5f0), bodies(mechanism)))
     visuals = URDFVisuals(AtlasRobot.urdfpath(); package_path=[AtlasRobot.packagepath()], link_colors=link_colors)
     remove_fixed_tree_joints!(mechanism)
     foot_points = AtlasRobot.foot_contact_points(mechanism)
     sole_frames = AtlasRobot.add_sole_frames!(mechanism)
-    # foot_polygons = make_foot_polygons(mechanism, sole_frames, foot_points; num_extreme_points=4);
     nominal_state = MechanismState(mechanism)
     AtlasRobot.setnominal!(nominal_state)
     floating_joint = first(joints(mechanism))
     configuration(nominal_state, floating_joint)[end] += -0.0028061189941; # FIXME
-    mechanism, nominal_state, foot_points, sole_frames, visuals
+    pelvis = findbody(mechanism, "pelvis");
+    mechanism, nominal_state, foot_points, sole_frames, floating_joint, pelvis, visuals
 end
 
 function center_of_mass_velocity(state::MechanismState)
@@ -113,14 +108,63 @@ function create_contact_model(
     return contact_model
 end
 
+function create_controller(
+        mechanism::Mechanism,
+        floating_joint::Joint,
+        foot_points::AbstractDict{BodyID, <:AbstractVector{<:Point3D}},
+        μ::Number,
+        pelvis::RigidBody,
+        nominal_state::MechanismState, # TODO: remove
+        foot_polygons # TODO: remove
+    )
+    optimizer = OSQP.Optimizer(verbose=false, eps_abs=1e-5, eps_rel=1e-5, max_iter=5000, adaptive_rho_interval=25)
+    lowlevel = MomentumBasedController{4}(mechanism, optimizer, floatingjoint = floating_joint);
+    for (bodyid, points) in foot_points
+        body = findbody(mechanism, bodyid)
+        for point in points
+            normal = FreeVector3D(default_frame(body), 0.0, 0.0, 1.0)
+            contact = addcontact!(lowlevel, body, point, normal, μ)
+            contact.maxnormalforce[] = 1e6 # TODO
+            contact.weight[] = 1e-3
+        end
+    end
+
+    # Linear momentum controller. TODO: remove ICP stuff, replace with CoM PD.
+    zdes = center_of_mass(nominal_state).v[3] - 0.05
+    gz = norm(mechanism.gravitational_acceleration)
+    ω = sqrt(gz / zdes)
+    icptraj = let
+        optimizer = OSQP.Optimizer(verbose=false, eps_abs=1e-6, eps_rel=1e-8, max_iter=10000, adaptive_rho_interval=25)
+        max_polygon_sides = 6 # TODO
+        num_segments = 15
+        ICPTrajectoryGenerator{Float64, max_polygon_sides}(optimizer, num_segments, ω)
+    end
+    linear_momentum_controller = ICPController(mechanism, icptraj, zdes)
+
+    # State machine. TODO: replace
+    statemachine = let
+        contacts = Dict(BodyID(body) => contact for (body, contact) in lowlevel.contacts)
+        ICPWalkingStateMachine(mechanism, contacts, icptraj)
+    end
+    # QPWalkingControl.init_footstep_plan!(statemachine, nominal_state, foot_polygons);
+
+    # High level controller
+    HumanoidQPController(lowlevel, pelvis, nominal_state,
+        statemachine, collect(values(statemachine.end_effector_controllers)), linear_momentum_controller)
+end
+
 ## Robot setup
-mechanism, state0, foot_points, sole_frames, visuals = create_atlas()
+mechanism, state0, foot_points, sole_frames, floating_joint, pelvis, visuals = create_atlas()
 
 ## Environment
 region_data = create_environment()
 
 ## Collision setup
 contact_model = create_contact_model(mechanism, foot_points, region_data)
+
+## Controller
+foot_polygons = make_foot_polygons(mechanism, sole_frames, foot_points; num_extreme_points=4);
+controller = create_controller(mechanism, floating_joint, foot_points, 0.7, pelvis, state0, foot_polygons);
 
 ## Initial conditions
 c0 = center_of_mass(state0).v
@@ -140,51 +184,15 @@ for i in eachindex(contacts0)
     end
 end
 
-# Additional settings
+## Additional settings
 g = mechanism.gravitational_acceleration.v
 max_cop_distance = 0.07
 
-optimizer_factory = with_optimizer(SCIP.Optimizer, limits_gap=0.05, limits_time=10 * 60 * 60, display_verblevel=5,
-    display_width=120, history_valuebased=true, lp_threads=10, branching_preferbinary=true, lp_scaling=false,
-    branching_allfullstrong_priority=536870911, heuristics_multistart_freq=20, heuristics_multistart_onlynlps=false, heuristics_mpec_priority=536870911)#heuristics_subnlp_priority=536870911)#, nlp_solver="ipopt", heuristics_nlpdiving_priority=536870911)#,;
-# optimizer_factory = with_optimizer(AmplNLWriter.Optimizer, "/home/twan/code/bonmin/Bonmin-1.8.7/build/bin/bonmin")
-# optimizer_factory = with_optimizer(AmplNLWriter.Optimizer, "/home/twan/code/couenne/couenne")
-# optimizer_factory = with_optimizer(Ipopt.Optimizer)
-# optimizer_factory = with_optimizer(Alpine.Optimizer, nlp_optimizer=Ipopt.Optimizer(print_level=0), mip_optimizer=Gurobi.Optimizer(OutputFlag=0))
-# optimizer_factory = let params = Dict{Symbol,Any}()
-#     params[:nl_solver] = with_optimizer(Ipopt.Optimizer, print_level=0)
-#     # params[:mip_solver] = with_optimizer(Gurobi.Optimizer, OutputFlag=0)
-#     params[:mip_solver] = with_optimizer(CPLEX.Optimizer, CPX_PARAM_SCRIND=0)
-#     # Note to self: if you get "Cannot set bounds because variable is of type: BINARY", use LinQuadOptInterface master (needs #91)
-#     params[:feasibility_pump] = false
-#     with_optimizer(Juniper.Optimizer, params)
-# end
-# optimizer_factory = with_optimizer(BARON.Optimizer;
-#     threads=Sys.CPU_THREADS ÷ 2, MaxTime=10 * 60.0, PrTimeFreq=5., AllowFilterSD=1, AllowFilterSQP=1, AllowIpopt=1#=, NumLoc=20, LocRes=1=#)
-# optimizer_factory = with_optimizer(Gurobi.Optimizer)
+## Optimizer
+optimizer_factory = baron_optimizer_factory()
+# optimizer_factory = scip_optimizer_factory()
 
-# https://www.ibm.com/support/knowledgecenter/en/SSSA5P_12.9.0/ilog.odms.cplex.help/CPLEX/Parameters/topics/OptimalityTarget.html
-
-# Parameters tried:
-# CPX_PARAM_OPTIMALITYTARGET = 2: CPX_OPTIMALITYTARGET_FIRSTORDER - not available for MIP
-# CPX_PARAM_FPHEUR = 1 - not available for MIQCP
-# CPX_PARAM_DEPIND = 3 # dependency checking: turn on at beginning and at end of preprocessing
-# CPX_PARAM_MIQCPSTRAT = 1 - solve QCPs as subproblems
-# CPXPARAM_MIP_Cuts_LiftProj = 3 - Generate lift-and-project cuts very aggressively
-# CPX_PARAM_MIPEMPHASIS = CPLEX.CPX_MIPEMPHASIS_HIDDENFEAS - applies considerable additional effort toward finding high quality feasible solutions that are difficult to locate
-
-# Parameters to try:
-# CPXPARAM_MIP_Cuts_LiftProj
-# CPX_PARAM_MIQCPSTRAT
-# CPX_MIPEMPHASIS_FEASIBILITY
-# CPX_PARAM_TILIM=120
-# barrier-related options
-# optimizer_factory = with_optimizer(CPLEX.Optimizer,
-#     CPX_PARAM_OPTIMALITYTARGET = CPLEX.CPX_OPTIMALITYTARGET_AUTO,
-#     CPX_PARAM_DEPIND = 3,
-#     CPXPARAM_MIP_Cuts_LiftProj = 3,
-#     CPX_PARAM_MIPEMPHASIS=CPLEX.CPX_MIPEMPHASIS_FEASIBILITY)
-
+## Problem
 problem = CentroidalTrajectoryProblem(optimizer_factory, region_data, c0, ċ0, contacts0;
     g=g, max_cop_distance=max_cop_distance, num_pieces=5, c_degree=3,
     # objective_type=ObjectiveTypes.MIN_EXCURSION);
