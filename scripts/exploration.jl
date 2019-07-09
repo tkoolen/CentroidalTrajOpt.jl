@@ -25,8 +25,11 @@ using AtlasRobot
 using RigidBodySim
 using Rotations
 using OSQP
+using MathOptInterface
 
 using MeshCat: RGBA
+
+const MOI = MathOptInterface
 
 include("optimizers.jl")
 
