@@ -1,25 +1,27 @@
-hide!(vis::AbstractVisualizer) = settransform!(vis, LinearMap(0I))
+# hide!(vis::Visualizer) = settransform!(vis, LinearMap(0I))
 
-struct CentroidalTrajectoryVisualizer{V<:AbstractVisualizer}
-    vis::V
-    com_visualizer::V
+struct CentroidalTrajectoryVisualizer
+    vis::Visualizer
+    com_visualizer::Visualizer
     region_data::Vector{ContactRegion{Float64}}
-    region_visualizers::Vector{V}
-    force_visualizers::Vector{ArrowVisualizer{V}}
-    cone_visualizers::Vector{V}
-    contact_position_visualizers::Vector{V}
+    region_visualizers::Vector{Visualizer}
+    force_visualizers::Vector{ArrowVisualizer{Visualizer}}
+    cone_visualizers::Vector{Visualizer}
+    contact_position_visualizers::Vector{Visualizer}
     gravity_mag::Float64
 end
 
-function CentroidalTrajectoryVisualizer(vis::AbstractVisualizer,
+function CentroidalTrajectoryVisualizer(vis::Visualizer,
         region_data::Vector{ContactRegion{Float64}}, gravity_mag, num_contacts::Number)
     com_visualizer = vis[:com]
     region_visualizers = [vis["region_$i"] for i in eachindex(region_data)]
     force_visualizers = [ArrowVisualizer(vis["f_$i"]) for i = 1 : num_contacts]
     cone_visualizers = [vis["cone_$i"] for i = 1 : num_contacts]
     contact_position_visualizers = [vis["p_$i"] for i = 1 : num_contacts]
-    CentroidalTrajectoryVisualizer(vis, com_visualizer, region_data, region_visualizers,
+    vis = CentroidalTrajectoryVisualizer(vis, com_visualizer, region_data, region_visualizers,
         force_visualizers, cone_visualizers, contact_position_visualizers, gravity_mag)
+    set_objects!(vis)
+    vis
 end
 
 function set_objects!(vis::CentroidalTrajectoryVisualizer)
@@ -119,9 +121,8 @@ function MeshCat.setanimation!(cvis::CentroidalTrajectoryVisualizer,
     num_frames = floor(Int, (tf - t0) * fps)
     for frame in 0 : num_frames
         t = t0 + frame / fps
-        atframe(animation, cvis.vis, frame) do frame_vis
-            frame_cvis = CentroidalTrajectoryVisualizer(frame_vis, cvis.region_data, cvis.gravity_mag, length(cvis.force_visualizers))
-            set_state!(frame_cvis, result, t)
+        atframe(animation, frame) do
+            set_state!(cvis, result, t)
         end
     end
     setanimation!(cvis.vis, animation, play=play, repetitions=repetitions)

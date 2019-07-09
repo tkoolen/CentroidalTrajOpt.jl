@@ -98,6 +98,11 @@ git-tree-sha1 = "f60954495a7afcee4136f78d1d60350abd37a409"
 uuid = "49dc2e85-a5d0-5ad3-a950-438e2897f1b9"
 version = "0.4.1"
 
+[[Cassette]]
+git-tree-sha1 = "2f5d4d747eb39ce6410438993e00ccd5a0f4bc27"
+uuid = "7057c7e9-c182-5462-911a-8362d720325c"
+version = "0.2.4"
+
 [[CentroidalTrajOpt]]
 deps = ["AxisArrays", "ColorTypes", "CoordinateTransformations", "EnhancedGJK", "GeometryTypes", "JuMP", "LinearAlgebra", "MeshCat", "Polyhedra", "QPControl", "QPWalkingControl", "RigidBodyDynamics", "RigidBodySim", "Rotations", "SCIP", "StaticArrays", "StaticUnivariatePolynomials"]
 path = ".."
@@ -161,9 +166,9 @@ uuid = "8bb1440f-4735-579b-a4ab-409b98df4dab"
 
 [[DiffEqBase]]
 deps = ["Compat", "Distributed", "DocStringExtensions", "FunctionWrappers", "IterativeSolvers", "IteratorInterfaceExtensions", "LinearAlgebra", "MuladdMacro", "Parameters", "RecipesBase", "RecursiveArrayTools", "RecursiveFactorization", "Requires", "Roots", "SparseArrays", "StaticArrays", "Statistics", "SuiteSparse", "TableTraits", "TreeViews"]
-git-tree-sha1 = "d48559a6fc4229881859e61e5de62c115ee2ed3d"
+git-tree-sha1 = "76b059cad5d43fd1fcfd7ffcd8ab5696d2027595"
 uuid = "2b5f629d-d688-5b77-993f-72d75c75574e"
-version = "5.15.0"
+version = "5.16.0"
 
 [[DiffEqCallbacks]]
 deps = ["DataStructures", "DiffEqBase", "LinearAlgebra", "OrdinaryDiffEq", "RecipesBase", "RecursiveArrayTools", "StaticArrays", "Test"]
@@ -455,14 +460,18 @@ uuid = "931e9471-e8fb-5385-a477-07ad12718aca"
 version = "0.3.0"
 
 [[MeshCat]]
-deps = ["AssetRegistry", "Base64", "BinDeps", "Colors", "CoordinateTransformations", "DocStringExtensions", "GeometryTypes", "JSExpr", "LinearAlgebra", "MsgPack", "Mux", "Parameters", "Requires", "Rotations", "Sockets", "StaticArrays", "UUIDs", "WebIO"]
-git-tree-sha1 = "e83e4c9d3c881990b5d41cbfd79c9e731f80d95b"
+deps = ["AssetRegistry", "Base64", "BinDeps", "Cassette", "Colors", "CoordinateTransformations", "DocStringExtensions", "GeometryTypes", "JSExpr", "LinearAlgebra", "MsgPack", "Mux", "Parameters", "Requires", "Rotations", "Sockets", "StaticArrays", "UUIDs", "WebIO"]
+git-tree-sha1 = "eb03c738cac3cab22ea850de8b4ef43b717262f2"
+repo-rev = "tk/develop"
+repo-url = "https://github.com/tkoolen/MeshCat.jl"
 uuid = "283c5d60-a78f-5afe-a0af-af636b173e11"
 version = "0.7.0"
 
 [[MeshCatMechanisms]]
 deps = ["ColorTypes", "CoordinateTransformations", "GeometryTypes", "InteractBase", "Interpolations", "LoopThrottle", "MechanismGeometries", "MeshCat", "OrderedCollections", "RigidBodyDynamics"]
-git-tree-sha1 = "efab8e156448f388bd5ff02c60308179dd8b753c"
+git-tree-sha1 = "91cf8bcc0f19a9a10894a3365c00a81816eb2163"
+repo-rev = "tk/develop"
+repo-url = "https://github.com/JuliaRobotics/MeshCatMechanisms.jl.git"
 uuid = "6ad125db-dd91-5488-b820-c1df6aab299d"
 version = "0.4.0"
 
@@ -562,9 +571,9 @@ version = "1.1.0"
 
 [[OrdinaryDiffEq]]
 deps = ["DataStructures", "DiffEqBase", "DiffEqDiffTools", "DiffEqOperators", "ExponentialUtilities", "ForwardDiff", "GenericSVD", "LinearAlgebra", "Logging", "MuladdMacro", "NLsolve", "Parameters", "RecursiveArrayTools", "Reexport", "StaticArrays"]
-git-tree-sha1 = "ea3c11934f97f803dadb9cb234ef26a35ce4d4ae"
+git-tree-sha1 = "c1bd0e707a377b14ea260635ee033aa37ebfc031"
 uuid = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
-version = "5.10.0"
+version = "5.11.0"
 
 [[ParameterJuMP]]
 deps = ["JuMP", "MathOptInterface", "SparseArrays"]

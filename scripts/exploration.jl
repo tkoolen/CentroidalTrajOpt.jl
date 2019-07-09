@@ -220,7 +220,6 @@ if newvis || (!@isdefined vis) || isempty(vis.core.scope.pool.connections)
 end
 delete!(vis)
 cvis = CentroidalTrajectoryVisualizer(vis, region_data, norm(g), length(contacts0))
-set_objects!(cvis)
 
 ## Robot visualization
 mvis = MechanismVisualizer(mechanism, visuals, vis)
@@ -328,21 +327,7 @@ for t in result.break_times
     @test ċ(t - 1e-8) ≈ ċ(t + 1e-8) atol=1e-5
 end
 ## Plan Visualization
-## Plan Visualization
 setanimation!(cvis, result);
-# using LoopThrottle
-# let
-#     T = last(result.break_times)
-#     max_rate = 1 / 2
-#     # max_rate = 1
-#     @throttle t for t in range(0, T, length = round(Int, 60 * T / max_rate))
-#         set_state!(cvis, result, t)
-#     end max_rate=max_rate
-# end
-
-##
-# set_state!(cvis, result, 1.0)
-# set_state!(cvis, result, 3 / 3 * (last(result.break_times) - first(result.break_times)))
 
 ## Mode sequence
 # value.(problem.z_vars)

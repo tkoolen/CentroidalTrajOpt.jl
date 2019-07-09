@@ -56,7 +56,7 @@ include("result.jl")
 using GeometryTypes: HyperSphere, Point, Vec
 
 import MeshCat
-using MeshCat: AbstractVisualizer
+using MeshCat: Visualizer
 using MeshCat: RGB, RGBA
 using MeshCat: ArrowVisualizer, HyperSphere, PointCloud, LineSegments, Cone
 using MeshCat: MeshLambertMaterial, MeshBasicMaterial, Texture, PngImage, LineBasicMaterial
