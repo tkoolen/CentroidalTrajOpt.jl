@@ -126,9 +126,9 @@ uuid = "8bb1440f-4735-579b-a4ab-409b98df4dab"
 
 [[DiffEqBase]]
 deps = ["Compat", "Distributed", "DocStringExtensions", "FunctionWrappers", "IterativeSolvers", "IteratorInterfaceExtensions", "LinearAlgebra", "MuladdMacro", "Parameters", "RecipesBase", "RecursiveArrayTools", "RecursiveFactorization", "Requires", "Roots", "SparseArrays", "StaticArrays", "Statistics", "SuiteSparse", "TableTraits", "TreeViews"]
-git-tree-sha1 = "d889777602c5537fd8b8b18dd8b603dc4b7c6538"
+git-tree-sha1 = "d48559a6fc4229881859e61e5de62c115ee2ed3d"
 uuid = "2b5f629d-d688-5b77-993f-72d75c75574e"
-version = "5.13.0"
+version = "5.15.0"
 
 [[DiffEqCallbacks]]
 deps = ["DataStructures", "DiffEqBase", "LinearAlgebra", "OrdinaryDiffEq", "RecipesBase", "RecursiveArrayTools", "StaticArrays", "Test"]
@@ -178,11 +178,9 @@ version = "0.8.0"
 
 [[EnhancedGJK]]
 deps = ["CoordinateTransformations", "GeometryTypes", "LinearAlgebra", "StaticArrays", "Statistics"]
-git-tree-sha1 = "a876f9302421e837dde7ede9c94ba2481c9f6780"
-repo-rev = "master"
-repo-url = "https://github.com/JuliaRobotics/EnhancedGJK.jl.git"
+git-tree-sha1 = "4e12f1e00d1f5350048cea7d78cbcc40972f6a5c"
 uuid = "3d39a06a-b57e-5769-b499-4d62b23c243f"
-version = "0.3.2"
+version = "0.4.0"
 
 [[ExponentialUtilities]]
 deps = ["LinearAlgebra", "Printf", "SparseArrays"]
@@ -493,9 +491,9 @@ version = "1.1.0"
 
 [[OrdinaryDiffEq]]
 deps = ["DataStructures", "DiffEqBase", "DiffEqDiffTools", "DiffEqOperators", "ExponentialUtilities", "ForwardDiff", "GenericSVD", "LinearAlgebra", "Logging", "MuladdMacro", "NLsolve", "Parameters", "RecursiveArrayTools", "Reexport", "StaticArrays"]
-git-tree-sha1 = "7481f05badc75b80a62d0da988f09d6028c4fbb1"
+git-tree-sha1 = "3980f750a7258698533145ee6b3f8aad492245e7"
 uuid = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
-version = "5.8.1"
+version = "5.9.0"
 
 [[ParameterJuMP]]
 deps = ["JuMP", "MathOptInterface", "SparseArrays"]
@@ -511,9 +509,9 @@ version = "0.10.3"
 
 [[Parametron]]
 deps = ["DocStringExtensions", "FunctionWrappers", "LinearAlgebra", "MacroTools", "MathOptInterface"]
-git-tree-sha1 = "acd4c6fe32d759242fabc1df4c09c7f6159752f3"
+git-tree-sha1 = "c514fb32253215ed36e72cce93a343b0ba282806"
 uuid = "41fac6d6-0ffa-5bcc-b863-17dd4947be41"
-version = "0.9.0"
+version = "0.9.1"
 
 [[Pidfile]]
 deps = ["FileWatching", "Test"]
