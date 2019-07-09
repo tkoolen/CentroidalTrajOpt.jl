@@ -63,20 +63,20 @@ function create_environment()
             Float64[1 0; 0 1; -1 0; 0 -1],
             0.2 * ones(4)
     ))
-    # push!(region_data, ContactRegion(
-    #         AffineMap(one(RotMatrix{3}) * RotXYZ(0.1, -0.2, 0.3), SVector(1.0, 0.3, 0.2)),
-    #         0.7,
-    #         0.0,
-    #         Float64[1 0; 0 1; -1 0; 0 -1],
-    #         0.4 * ones(4)
-    # ))
-    # push!(region_data, ContactRegion(
-    #         AffineMap(one(RotMatrix{3}) * RotXYZ(0.1, -0.2, 0.3), SVector(0.0, 1.0, 0.2)),
-    #         0.7,
-    #         0.0,
-    #         Float64[1 0; 0 1; -1 0; 0 -1],
-    #         0.3 * ones(4)
-    # ))
+    push!(region_data, ContactRegion(
+            AffineMap(one(RotMatrix{3}) * RotXYZ(0.1, -0.2, 0.3), SVector(1.0, 0.3, 0.2)),
+            0.7,
+            0.0,
+            Float64[1 0; 0 1; -1 0; 0 -1],
+            0.4 * ones(4)
+    ))
+    push!(region_data, ContactRegion(
+            AffineMap(one(RotMatrix{3}) * RotXYZ(0.1, -0.2, 0.3), SVector(0.0, 1.0, 0.2)),
+            0.7,
+            0.0,
+            Float64[1 0; 0 1; -1 0; 0 -1],
+            0.3 * ones(4)
+    ))
     region_data
 end
 
@@ -147,6 +147,21 @@ function create_controller(
         state_machine, collect(values(state_machine.end_effector_controllers)), linear_momentum_controller)
 end
 
+function MeshCatMechanisms.setelement!(mvis::MechanismVisualizer, contact_model::ContactModel, args...; base_name="collision element ")
+    mechanism = mvis.state.mechanism
+    i = 1
+    for group in contact_model.collision_groups
+        for element in group
+            geometry = element.geometry
+            if geometry isa MeshCatMechanisms.GeometryLike
+                frame = element.transform.from
+                setelement!(mvis, frame, element.geometry, args...)
+                i += 1
+            end
+        end
+    end
+end
+
 ## Robot setup
 mechanism, state0, foot_points, sole_frames, floating_joint, pelvis, visuals = create_atlas()
 
@@ -210,7 +225,7 @@ if relax
     relaxbilinear!(problem.model, method=:Logarithmic1D, disc_level=17, constraints_to_skip=problem.friction_cone_quadratic_constraints)
 end
 
-## Environment visualization
+## Create visualizer
 using MeshCat
 newvis = false
 if newvis || (!@isdefined vis) || isempty(vis.core.scope.pool.connections)
@@ -219,11 +234,16 @@ if newvis || (!@isdefined vis) || isempty(vis.core.scope.pool.connections)
     # wait(vis)
 end
 delete!(vis)
+
+## Centroidal trajectory visualization
 cvis = CentroidalTrajectoryVisualizer(vis, region_data, norm(g), length(contacts0))
 
 ## Robot visualization
 mvis = MechanismVisualizer(mechanism, visuals, vis)
 copyto!(mvis, state0)
+
+## Environment visualization
+setelement!(mvis, contact_model)
 
 ## Feasibility
 result = CentroidalTrajOpt.solve!(problem);

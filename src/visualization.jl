@@ -4,7 +4,6 @@ struct CentroidalTrajectoryVisualizer
     vis::Visualizer
     com_visualizer::Visualizer
     region_data::Vector{ContactRegion{Float64}}
-    region_visualizers::Vector{Visualizer}
     force_visualizers::Vector{ArrowVisualizer{Visualizer}}
     cone_visualizers::Vector{Visualizer}
     contact_position_visualizers::Vector{Visualizer}
@@ -13,40 +12,20 @@ end
 
 function CentroidalTrajectoryVisualizer(vis::Visualizer,
         region_data::Vector{ContactRegion{Float64}}, gravity_mag, num_contacts::Number)
-    com_visualizer = vis[:com]
-    region_visualizers = [vis["region_$i"] for i in eachindex(region_data)]
-    force_visualizers = [ArrowVisualizer(vis["f_$i"]) for i = 1 : num_contacts]
-    cone_visualizers = [vis["cone_$i"] for i = 1 : num_contacts]
-    contact_position_visualizers = [vis["p_$i"] for i = 1 : num_contacts]
-    vis = CentroidalTrajectoryVisualizer(vis, com_visualizer, region_data, region_visualizers,
-        force_visualizers, cone_visualizers, contact_position_visualizers, gravity_mag)
-    set_objects!(vis)
-    vis
-end
-
-function set_objects!(vis::CentroidalTrajectoryVisualizer)
-    # Contact regions
-    for (region_vis, region) in zip(vis.region_visualizers, vis.region_data)
-        thickness = 0.05
-        A, b = region.A, region.b
-        global_to_local = inv(region.transform)
-        n = size(A, 1)
-        Ā = [A zeros(n, 1); 0 0 1; 0 0 -1]
-        b̄ = [b; 0; thickness]
-        h = hrep(Ā * global_to_local.linear, b̄ - Ā * global_to_local.translation)
-        setobject!(region_vis, Mesh(polyhedron(h)))
-    end
 
     # CoM
+    com_visualizer = vis[:com]
     img = PngImage(joinpath(@__DIR__, "..", "assets", "checkerboard.png"))
     com_material = MeshBasicMaterial(map=Texture(image=img))#, wrap=(1, 1), repeat=(1, 1)))
-    setobject!(vis.com_visualizer, HyperSphere(Point(0., 0, 0), 0.05), com_material)
-    setvisible!(vis.com_visualizer, false)
+    setobject!(com_visualizer, HyperSphere(Point(0., 0, 0), 0.05), com_material)
+    setvisible!(com_visualizer, false)
 
     # Forces / contact force cones
+    force_visualizers = [ArrowVisualizer(vis["f_$i"]) for i = 1 : num_contacts]
+    cone_visualizers = [vis["cone_$i"] for i = 1 : num_contacts]
     force_orange = RGB(243 / 255, 118 / 255, 32 / 255)
     force_orange_transparent = RGBA(force_orange, 0.2)
-    for (force_visualizer, cone_visualizer) in zip(vis.force_visualizers, vis.cone_visualizers)
+    for (force_visualizer, cone_visualizer) in zip(force_visualizers, cone_visualizers)
         setobject!(force_visualizer, MeshLambertMaterial(; color=force_orange))
         cone_height = 0.2
         cone = Cone(Point(0., 0., cone_height), Point(0., 0., 0.), cone_height)
@@ -55,11 +34,13 @@ function set_objects!(vis::CentroidalTrajectoryVisualizer)
     end
 
     # Contact positions
-    for contact_position_visualizer in vis.contact_position_visualizers
+    contact_position_visualizers = [vis["p_$i"] for i = 1 : num_contacts]
+    for contact_position_visualizer in contact_position_visualizers
         setobject!(contact_position_visualizer, HyperSphere(Point(0., 0, 0), 0.02), MeshLambertMaterial(color=RGB(0.1, 0.1, 0.1)))
         setvisible!(contact_position_visualizer, false)
     end
-    vis
+    CentroidalTrajectoryVisualizer(vis, com_visualizer, region_data,
+        force_visualizers, cone_visualizers, contact_position_visualizers, gravity_mag)
 end
 
 function set_com_trajectory!(vis::CentroidalTrajectoryVisualizer, result::CentroidalTrajectoryResult)
