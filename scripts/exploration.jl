@@ -27,6 +27,8 @@ using Rotations
 using OSQP
 using MathOptInterface
 
+using QPControl.Trajectories: PointTrajectory
+
 using MeshCat: RGBA
 
 const MOI = MathOptInterface
@@ -135,8 +137,9 @@ function create_controller(
     end
 
     # Linear momentum controller
-    com_gains = PDGains(100.0, 20.0)
-    linear_momentum_controller = PDCoMController(com_gains, com_trajectory, mass(mechanism))
+    world_frame = root_frame(mechanism)
+    com_gains = QPWalkingControl.critically_damped_gains(10.0)
+    linear_momentum_controller = PDCoMController(com_gains, PointTrajectory(world_frame, com_trajectory), mass(mechanism))
 
     # State machine
     contacts = Dict(BodyID(body) => contact for (body, contact) in lowlevel.contacts)
@@ -194,12 +197,12 @@ g = mechanism.gravitational_acceleration.v
 max_cop_distance = 0.07
 
 ## Optimizer
-optimizer_factory = baron_optimizer_factory()
-# optimizer_factory = scip_optimizer_factory()
+# optimizer_factory = baron_optimizer_factory()
+optimizer_factory = scip_optimizer_factory()
 
 ## Problem
 problem = CentroidalTrajectoryProblem(optimizer_factory, region_data, c0, ċ0, contacts0;
-    g=g, max_cop_distance=max_cop_distance, num_pieces=5, c_degree=3,
+    g=g, max_cop_distance=max_cop_distance, num_pieces=2, c_degree=3,
     # objective_type=ObjectiveTypes.MIN_EXCURSION);
     objective_type=ObjectiveTypes.FEASIBILITY);
 
@@ -255,7 +258,7 @@ set_state!(cvis, result, 0.0)
 if backend(problem.model).optimizer.model isa SCIP.Optimizer
     mscip = backend(problem.model).optimizer.model.mscip
     # SCIP.print_statistics(mscip)
-    SCIP.print_heuristic_statistics(mscip)
+    # SCIP.print_heuristic_statistics(mscip)
 end
 
 ## Optimality
@@ -275,8 +278,8 @@ end
 ## Tests
 using Test
 c = result.center_of_mass
-ċ = map_subfunctions(x -> map_elements(derivative, x), c)
-c̈ = map_subfunctions(x -> map_elements(derivative, x), ċ)
+ċ = map_subfunctions(derivative, c)
+c̈ = map_subfunctions(derivative, ċ)
 rs = result.centers_of_pressure
 fs = result.contact_forces
 # τns = result.contact_normal_torques
@@ -357,33 +360,25 @@ setanimation!(cvis, result);
 controller = create_controller(mechanism, floating_joint, foot_points, μ_control, pelvis, state0, result.center_of_mass);
 
 ## Simulation
-gui = GUI(mvis);
-open(gui)
+simulate = true
+if simulate
+    gui = GUI(mvis);
+    open(gui)
+    state = MechanismState(mechanism)
+    copyto!(state, state0)
+    Δt = 1 / 500
+    pcontroller = PeriodicController(similar(velocity(state)), Δt, controller)
+    damping = JointDamping{Float64}(mechanism, AtlasRobot.urdfpath())
+    dynamics = Dynamics(
+        mechanism,
+        SumController(similar(velocity(state)), (pcontroller, damping));
+        contact_model=contact_model)
+    callback = CallbackSet(RealtimeRateLimiter(poll_interval=pi / 100), CallbackSet(gui; max_fps=60))
+    tspan = (0., 5.)
+    contact_state = SoftContactState(contact_model)
+    odeproblem = ODEProblem(dynamics, (state, contact_state), tspan; callback=callback)
 
-state = MechanismState(mechanism)
-copyto!(state, state0)
-Δt = 1 / 500
-pcontroller = PeriodicController(similar(velocity(state)), Δt, controller)
-damping = JointDamping{Float64}(mechanism, AtlasRobot.urdfpath())
-dynamics = Dynamics(
-    mechanism,
-    SumController(similar(velocity(state)), (pcontroller, damping));
-    contact_model=contact_model)
-callback = CallbackSet(RealtimeRateLimiter(poll_interval=pi / 100), CallbackSet(gui; max_fps=60))
-# callback = CallbackSet(gui; max_fps=30)
-tspan = (0., 18.)
-contact_state = SoftContactState(contact_model)
-odeproblem = ODEProblem(dynamics, (state, contact_state), tspan)#; callback=callback)
-
-# # TODO: move somewhere else
-# using StaticUnivariatePolynomials
-# const SUP = StaticUnivariatePolynomials
-# function (p::SUP.Polynomial)(x, ::Val{2})
-#     pd = SUP.derivative(p)
-#     pdd = SUP.derivative(pd)
-#     p(x), pd(x), pdd(x)
-# end
-
-# simulate
-@time sol = RigidBodySim.solve(odeproblem, Tsit5(), abs_tol = 1e-8, dt = 1e-6)#, dtmax=1e-3);
-setanimation!(mvis, sol)
+    # simulate
+    @time sol = RigidBodySim.solve(odeproblem, Tsit5(), abs_tol = 1e-8, dt = 1e-6, dtmax=1e-3);
+    setanimation!(mvis, sol)
+end

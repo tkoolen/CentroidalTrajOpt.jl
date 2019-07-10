@@ -4,7 +4,6 @@ export
     CentroidalTrajectoryProblem,
     ContactRegion,
     solve!,
-    center_of_mass,
     normals,
     disallow_jumping!,
     ObjectiveTypes
@@ -20,13 +19,11 @@ export
 
 # Should move
 export
-    map_subfunctions,
-    map_elements
+    map_subfunctions
 
 # Visualization
 export
     CentroidalTrajectoryVisualizer,
-    set_objects!,
     set_com_trajectory!,
     set_state!
 
@@ -40,7 +37,8 @@ using AxisArrays
 
 import QPControl
 
-using QPControl.Trajectories: BezierCurve, Piecewise, Constant, derivative, breaks
+using QPControl.Trajectories: BezierCurve, Piecewise, Constant
+using QPControl.Trajectories: breaks
 using StaticUnivariatePolynomials: derivative
 
 const SUP = StaticUnivariatePolynomials

@@ -1,10 +1,10 @@
 # Trajectory utilities
-struct Vectorized{T}
-    trajectories::T
-end
+# struct Vectorized{T}
+#     trajectories::T
+# end
 
-(vectorized::Vectorized)(x, args...) = map(traj -> traj(x, args...), vectorized.trajectories)
-map_elements(f, vectorized::Vectorized) = Vectorized(map(f, vectorized.trajectories))
+# (vectorized::Vectorized)(x, args...) = map(traj -> traj(x, args...), vectorized.trajectories)
+# map_elements(f, vectorized::Vectorized) = Vectorized(map(f, vectorized.trajectories))
 
 function map_subfunctions(f, traj::Piecewise)
     Piecewise(map(f, traj.subfunctions), traj.breaks; clamp=traj.clamp)
@@ -13,6 +13,13 @@ end
 # Polynomial utilities
 function scale_argument(x::Polynomial{N}, s) where {N}
     Polynomial(ntuple(i -> s^(i - 1) * x.coeffs[i], Val(N)))
+end
+
+# TODO: type piracy; should generalize to any N
+function (p::Polynomial)(x, ::Val{2})
+    pd = SUP.derivative(p)
+    pdd = SUP.derivative(pd)
+    p(x), pd(x), pdd(x)
 end
 
 # JuMP utilities

@@ -41,9 +41,9 @@ version = "0.8.10"
 
 [[BinaryProvider]]
 deps = ["Libdl", "Logging", "SHA"]
-git-tree-sha1 = "8153fd64131cd00a79544bb23788877741f627bb"
+git-tree-sha1 = "c7361ce8a2129f20b0e05a89f7070820cfed6648"
 uuid = "b99e7846-7c00-51b0-8f62-c81ae34c0232"
-version = "0.5.5"
+version = "0.5.6"
 
 [[Blink]]
 deps = ["Base64", "BinDeps", "Distributed", "JSExpr", "JSON", "Lazy", "Libdl", "Logging", "MacroTools", "Mustache", "Mux", "Reexport", "Sockets", "Test", "WebIO", "WebSockets"]
@@ -126,9 +126,9 @@ uuid = "8bb1440f-4735-579b-a4ab-409b98df4dab"
 
 [[DiffEqBase]]
 deps = ["Compat", "Distributed", "DocStringExtensions", "FunctionWrappers", "IterativeSolvers", "IteratorInterfaceExtensions", "LinearAlgebra", "MuladdMacro", "Parameters", "RecipesBase", "RecursiveArrayTools", "RecursiveFactorization", "Requires", "Roots", "SparseArrays", "StaticArrays", "Statistics", "SuiteSparse", "TableTraits", "TreeViews"]
-git-tree-sha1 = "d48559a6fc4229881859e61e5de62c115ee2ed3d"
+git-tree-sha1 = "76b059cad5d43fd1fcfd7ffcd8ab5696d2027595"
 uuid = "2b5f629d-d688-5b77-993f-72d75c75574e"
-version = "5.15.0"
+version = "5.16.0"
 
 [[DiffEqCallbacks]]
 deps = ["DataStructures", "DiffEqBase", "LinearAlgebra", "OrdinaryDiffEq", "RecipesBase", "RecursiveArrayTools", "StaticArrays", "Test"]
@@ -313,10 +313,10 @@ uuid = "4076af6c-e467-56ae-b986-b466b2749572"
 version = "0.19.2"
 
 [[Knockout]]
-deps = ["JSExpr", "JSON", "Observables", "Pkg", "Test", "WebIO"]
-git-tree-sha1 = "5cca7f070f85392cd0f42220c8ea5f7be96dacf4"
+deps = ["JSExpr", "JSON", "Observables", "Test", "WebIO"]
+git-tree-sha1 = "53533b51d4b6964eca3065b0834e9f61ed2f7515"
 uuid = "bcebb21b-c2e3-54f8-a781-646b90f6d2cc"
-version = "0.2.2"
+version = "0.2.3"
 
 [[Lazy]]
 deps = ["Compat", "MacroTools", "Test"]
@@ -397,11 +397,11 @@ version = "0.3.0"
 
 [[MeshCat]]
 deps = ["AssetRegistry", "Base64", "BinDeps", "Colors", "CoordinateTransformations", "DocStringExtensions", "GeometryTypes", "JSExpr", "LinearAlgebra", "MsgPack", "Mux", "Parameters", "Requires", "Rotations", "Sockets", "StaticArrays", "UUIDs", "WebIO"]
-git-tree-sha1 = "e83e4c9d3c881990b5d41cbfd79c9e731f80d95b"
+git-tree-sha1 = "76f89bb238297c8e3fdff0830207cce893736346"
 repo-rev = "master"
 repo-url = "https://github.com/rdeits/MeshCat.jl.git"
 uuid = "283c5d60-a78f-5afe-a0af-af636b173e11"
-version = "0.7.0"
+version = "0.8.0"
 
 [[MeshCatMechanisms]]
 deps = ["ColorTypes", "CoordinateTransformations", "GeometryTypes", "InteractBase", "Interpolations", "LoopThrottle", "MechanismGeometries", "MeshCat", "OrderedCollections", "RigidBodyDynamics"]
@@ -491,9 +491,9 @@ version = "1.1.0"
 
 [[OrdinaryDiffEq]]
 deps = ["DataStructures", "DiffEqBase", "DiffEqDiffTools", "DiffEqOperators", "ExponentialUtilities", "ForwardDiff", "GenericSVD", "LinearAlgebra", "Logging", "MuladdMacro", "NLsolve", "Parameters", "RecursiveArrayTools", "Reexport", "StaticArrays"]
-git-tree-sha1 = "3980f750a7258698533145ee6b3f8aad492245e7"
+git-tree-sha1 = "77b2e1d2a7e172ee671acc827ff44060ef8d65c2"
 uuid = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
-version = "5.9.0"
+version = "5.11.1"
 
 [[ParameterJuMP]]
 deps = ["JuMP", "MathOptInterface", "SparseArrays"]
@@ -541,7 +541,7 @@ uuid = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 
 [[QPControl]]
 deps = ["LinearAlgebra", "MathOptInterface", "Parametron", "RigidBodyDynamics", "Rotations", "StaticArrays", "StaticUnivariatePolynomials"]
-git-tree-sha1 = "387165e7d81764da1f783fe462e16dfd84672a99"
+git-tree-sha1 = "d5333a72fe97551b2e46a33b2708d6c14b3fb5dd"
 repo-rev = "master"
 repo-url = "git@github.com:tkoolen/QPControl.jl.git"
 uuid = "d1d18edd-2826-5709-814b-0b0c7d0d034b"
@@ -549,7 +549,7 @@ version = "0.1.0"
 
 [[QPWalkingControl]]
 deps = ["AtlasRobot", "Blink", "CoordinateTransformations", "EnhancedGJK", "GeometryTypes", "Interact", "InteractBase", "LightXML", "LinearAlgebra", "MathOptInterface", "MechanismGeometries", "MeshCat", "MeshCatMechanisms", "NamedColors", "OSQP", "Observables", "Parametron", "PlanarConvexHulls", "QPControl", "RigidBodyDynamics", "RigidBodySim", "Rotations", "StaticArrays", "StaticUnivariatePolynomials", "Test", "WebIO"]
-git-tree-sha1 = "f61e29053cce6ada52223ddcc1cd3152cac74f4e"
+git-tree-sha1 = "bf3645551ead872b16f62c38f28b114d93363a25"
 repo-rev = "tk/develop"
 repo-url = "https://github.com/tkoolen/QPWalkingControl.jl.git"
 uuid = "0b169a85-4a4a-588b-8c74-4a8044adc824"
@@ -606,7 +606,7 @@ version = "0.5.2"
 
 [[RigidBodyDynamics]]
 deps = ["CoordinateTransformations", "DocStringExtensions", "EnhancedGJK", "GeometryTypes", "LightXML", "LinearAlgebra", "LoopThrottle", "Random", "Reexport", "Rotations", "SparseArrays", "StaticArrays", "TypeSortedCollections", "UnsafeArrays"]
-git-tree-sha1 = "e57a123b357ad1913e209d29a04376d0bdf9052b"
+git-tree-sha1 = "4c9f3c4c59898326b52eb67344bfb02e75f43d67"
 repo-rev = "tk/develop"
 repo-url = "https://github.com/JuliaRobotics/RigidBodyDynamics.jl.git"
 uuid = "366cf18f-59d5-5db9-a4de-86a9f6786172"
@@ -690,9 +690,9 @@ version = "1.0.0"
 
 [[Tables]]
 deps = ["DataValueInterfaces", "IteratorInterfaceExtensions", "LinearAlgebra", "Requires", "TableTraits", "Test"]
-git-tree-sha1 = "c93aafd5c45f850c653ec1c45857ba2151835f95"
+git-tree-sha1 = "b983930602b75a14007c9c72e945b4a7c878c538"
 uuid = "bd369af6-aec1-5ad0-b16a-f7cc5008161c"
-version = "0.2.7"
+version = "0.2.8"
 
 [[Test]]
 deps = ["Distributed", "InteractiveUtils", "Logging", "Random"]
@@ -733,10 +733,10 @@ uuid = "c4a57d5a-5b31-53a6-b365-19f8c011fbd6"
 version = "0.4.0"
 
 [[WebIO]]
-deps = ["AssetRegistry", "Base64", "Compat", "FunctionalCollections", "JSON", "Logging", "Observables", "Random", "Requires", "Sockets", "Test", "UUIDs", "Widgets"]
-git-tree-sha1 = "c1f259d4c23f12262f4fa69263a4e54fbea77450"
+deps = ["AssetRegistry", "Base64", "Compat", "Distributed", "FunctionalCollections", "JSON", "Logging", "Observables", "Random", "Requires", "Sockets", "UUIDs", "WebSockets", "Widgets"]
+git-tree-sha1 = "458ebbd85da851b01bed01e6321b0d8f4c7044b0"
 uuid = "0f1e0344-ec1d-5b48-a673-e5cf874b6c29"
-version = "0.7.0"
+version = "0.8.6"
 
 [[WebSockets]]
 deps = ["Base64", "Dates", "Distributed", "HTTP", "Logging", "Random", "Sockets", "Test"]
