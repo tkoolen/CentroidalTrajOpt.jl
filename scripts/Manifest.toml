@@ -469,7 +469,7 @@ version = "0.7.0"
 
 [[MeshCatMechanisms]]
 deps = ["ColorTypes", "CoordinateTransformations", "GeometryTypes", "InteractBase", "Interpolations", "LoopThrottle", "MechanismGeometries", "MeshCat", "OrderedCollections", "RigidBodyDynamics"]
-git-tree-sha1 = "91cf8bcc0f19a9a10894a3365c00a81816eb2163"
+git-tree-sha1 = "ba9f55ab9ce1f2ebdadeae41243e8057bf3bd2e7"
 repo-rev = "tk/develop"
 repo-url = "https://github.com/JuliaRobotics/MeshCatMechanisms.jl.git"
 uuid = "6ad125db-dd91-5488-b820-c1df6aab299d"
@@ -715,8 +715,8 @@ uuid = "366cf18f-59d5-5db9-a4de-86a9f6786172"
 version = "2.1.0"
 
 [[RigidBodySim]]
-deps = ["Blink", "DataStructures", "DiffEqBase", "DiffEqCallbacks", "DocStringExtensions", "InteractBase", "MeshCatMechanisms", "Observables", "OrdinaryDiffEq", "Printf", "RigidBodyDynamics", "WebIO"]
-git-tree-sha1 = "4053236c9c43d7a183777e39186db03bd0e53efa"
+deps = ["Blink", "DataStructures", "DiffEqBase", "DiffEqCallbacks", "DocStringExtensions", "InteractBase", "MeshCat", "MeshCatMechanisms", "Observables", "OrdinaryDiffEq", "Printf", "RigidBodyDynamics", "WebIO"]
+git-tree-sha1 = "2e290601a7922c56a85a2f1a63b653f02a8e7617"
 repo-rev = "tk/develop"
 repo-url = "https://github.com/JuliaRobotics/RigidBodySim.jl.git"
 uuid = "e61f16d8-a6b7-5689-8d03-627c2b27ebce"

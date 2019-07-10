@@ -349,8 +349,10 @@ for t in result.break_times
     @test c(t - 1e-8) ≈ c(t + 1e-8) atol=1e-5
     @test ċ(t - 1e-8) ≈ ċ(t + 1e-8) atol=1e-5
 end
+
 ## Plan Visualization
-setanimation!(cvis, result);
+animation = Animation()
+setanimation!(cvis, result, animation)
 
 ## Mode sequence
 # value.(problem.z_vars)
@@ -374,11 +376,12 @@ if simulate
         SumController(similar(velocity(state)), (pcontroller, damping));
         contact_model=contact_model)
     callback = CallbackSet(RealtimeRateLimiter(poll_interval=pi / 100), CallbackSet(gui; max_fps=60))
-    tspan = (0., 5.)
+    T = last(result.break_times)
+    tspan = (0., T)
     contact_state = SoftContactState(contact_model)
     odeproblem = ODEProblem(dynamics, (state, contact_state), tspan; callback=callback)
 
     # simulate
     @time sol = RigidBodySim.solve(odeproblem, Tsit5(), abs_tol = 1e-8, dt = 1e-6, dtmax=1e-3);
-    setanimation!(mvis, sol)
+    setanimation!(mvis, sol, animation)
 end
