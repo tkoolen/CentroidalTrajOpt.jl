@@ -97,3 +97,8 @@ end
 # JuMP.value(x::Polynomial) = Polynomial(JuMP.value.(x.coeffs))
 # JuMP.value(x::BezierCurve) = BezierCurve(JuMP.value.(x.coeffs))
 # JuMP.value(x::Piecewise) = Piecewise(JuMP.value.(x.subfunctions), JuMP.value.(x.breaks), x.clamp)
+
+function align_z_axis(rot::Rotation{3}, z_axis::StaticVector{3})
+    rot_z_axis = rot * SVector(0, 0, 1)
+    rotation_between(rot_z_axis, z_axis) * rot
+end

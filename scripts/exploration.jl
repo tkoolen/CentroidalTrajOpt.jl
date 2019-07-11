@@ -34,6 +34,7 @@ using MeshCat: RGBA
 const MOI = MathOptInterface
 
 include("optimizers.jl")
+include("util.jl")
 
 function create_atlas()
     urdf = AtlasRobot.urdfpath()
@@ -49,11 +50,6 @@ function create_atlas()
     configuration(nominal_state, floating_joint)[end] += -0.0028061189941; # FIXME
     pelvis = findbody(mechanism, "pelvis");
     mechanism, nominal_state, foot_points, sole_frames, floating_joint, pelvis, visuals
-end
-
-function center_of_mass_velocity(state::MechanismState)
-    h = momentum(state)
-    FreeVector3D(h.frame, linear(h)) / mass(state.mechanism)
 end
 
 function create_environment()
@@ -148,21 +144,6 @@ function create_controller(
     # High level controller
     HumanoidQPController(lowlevel, pelvis, nominal_state,
         state_machine, collect(values(state_machine.end_effector_controllers)), linear_momentum_controller)
-end
-
-function MeshCatMechanisms.setelement!(mvis::MechanismVisualizer, contact_model::ContactModel, args...; base_name="collision element ")
-    mechanism = mvis.state.mechanism
-    i = 1
-    for group in contact_model.collision_groups
-        for element in group
-            geometry = element.geometry
-            if geometry isa MeshCatMechanisms.GeometryLike
-                frame = element.transform.from
-                setelement!(mvis, frame, element.geometry, args...)
-                i += 1
-            end
-        end
-    end
 end
 
 ## Robot setup
