@@ -102,3 +102,8 @@ function align_z_axis(rot::Rotation{3}, z_axis::StaticVector{3})
     rot_z_axis = rot * SVector(0, 0, 1)
     rotation_between(rot_z_axis, z_axis) * rot
 end
+
+function closest_pose(previous::AffineMap, origin::StaticVector{3}, z_axis::StaticVector{3})
+    rot = align_z_axis(previous.linear, z_axis)
+    AffineMap(rot, origin)
+end
