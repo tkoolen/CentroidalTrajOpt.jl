@@ -112,17 +112,23 @@ end
 
 function create_controller(
         mechanism::Mechanism,
+        contact_body_ids::AbstractVector{BodyID},
         floating_joint::Joint,
         foot_points::AbstractDict{BodyID, <:AbstractVector{<:Point3D}},
+        sole_frames::AbstractDict{BodyID, CartesianFrame3D},
         μ::Number,
         pelvis::RigidBody,
+        state0::MechanismState,
         nominal_state::MechanismState,
         com_trajectory,
+        contact_position_trajectories,
+        contact_indicator_trajectories
     )
     # Low level controller
     optimizer = OSQP.Optimizer(verbose=false, eps_abs=1e-5, eps_rel=1e-5, max_iter=5000, adaptive_rho_interval=25)
     lowlevel = MomentumBasedController{4}(mechanism, optimizer, floatingjoint = floating_joint);
-    for (bodyid, points) in foot_points
+    for bodyid in contact_body_ids
+        points = foot_points[bodyid]
         body = findbody(mechanism, bodyid)
         for point in points
             normal = FreeVector3D(default_frame(body), 0.0, 0.0, 1.0)
@@ -138,8 +144,12 @@ function create_controller(
     linear_momentum_controller = PDCoMController(com_gains, PointTrajectory(world_frame, com_trajectory), mass(mechanism))
 
     # State machine
+    foot_pose_trajectories = map(enumerate(contact_body_ids)) do (i, bodyid)
+        pose0 = transform_to_root(state0, sole_frames[bodyid])
+        pose_trajectory(pose0, contact_position_trajectories[i], contact_indicator_trajectories[i], region_data)
+    end
     contacts = Dict(BodyID(body) => contact for (body, contact) in lowlevel.contacts)
-    state_machine = CoMTrackingStateMachine(mechanism, contacts)
+    state_machine = CoMTrackingStateMachine(mechanism, contacts) # TODO: pass in foot_pose_trajectories
 
     # High level controller
     HumanoidQPController(lowlevel, pelvis, nominal_state,
@@ -158,7 +168,10 @@ contact_model = create_contact_model(mechanism, foot_points, region_data)
 ## Initial conditions
 c0 = center_of_mass(state0).v
 ċ0 = center_of_mass_velocity(state0).v
-contacts0 = map(values(sole_frames)) do sole_frame # TODO
+
+contact_body_ids = sort(collect(keys(sole_frames)), by=x -> x.value) # establishes order once and for all
+contacts0 = map(contact_body_ids) do bodyid # TODO
+    sole_frame = sole_frames[bodyid]
     p0 = translation(transform_to_root(state0, sole_frame))
     @assert norm(c0 - p0) <= 1.2 # TODO: integrate with kinematic limits
     region_data[1] => p0
@@ -339,7 +352,9 @@ plan_animation = Animation(cvis, result)
 
 ## Controller
 μ_control = 0.7
-controller = create_controller(mechanism, floating_joint, foot_points, μ_control, pelvis, state0, result.center_of_mass);
+nominal_state = state0 # TODO
+controller = create_controller(mechanism, contact_body_ids, floating_joint, foot_points, sole_frames, μ_control, pelvis,
+    state0, nominal_state, result.center_of_mass, result.contact_positions, result.contact_indicators);
 
 ## Simulation
 simulate = true

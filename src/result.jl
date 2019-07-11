@@ -55,7 +55,7 @@ function CentroidalTrajectoryResult(problem::CentroidalTrajectoryProblem)
     # Contact indicators
     z_vals = map(val, problem.z_vars)
     zs = map(contacts.val) do contact
-        subfunctions = [Constant(z_vals[pieces(i), contacts(contact)]) for i in pieces.val]
+        subfunctions = [Constant(z_vals[pieces(i), contacts(contact)] .> 0.5) for i in pieces.val]
         Piecewise(subfunctions, break_times)
     end
 
