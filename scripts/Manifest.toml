@@ -504,7 +504,7 @@ version = "0.2.1"
 
 [[MultilinearOpt]]
 deps = ["JuMP", "LinearAlgebra", "MathOptInterface", "PiecewiseLinearOpt"]
-git-tree-sha1 = "cda6bcc04a47835f8063865b260af82e3d7c62e0"
+git-tree-sha1 = "6b5c27fbf513a5d0e67b8de5dc9fce3d56dce9c7"
 repo-rev = "tk/quadratic-terms"
 repo-url = "https://github.com/joehuchette/MultilinearOpt.jl.git"
 uuid = "056e1bd9-d272-5a02-876b-3036887dbe22"
@@ -647,7 +647,7 @@ uuid = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 
 [[QPControl]]
 deps = ["LinearAlgebra", "MathOptInterface", "Parametron", "RigidBodyDynamics", "Rotations", "StaticArrays", "StaticUnivariatePolynomials"]
-git-tree-sha1 = "d5333a72fe97551b2e46a33b2708d6c14b3fb5dd"
+git-tree-sha1 = "dc43c4dca7290d30e00fa80b168e0f1196347b4d"
 repo-rev = "master"
 repo-url = "git@github.com:tkoolen/QPControl.jl.git"
 uuid = "d1d18edd-2826-5709-814b-0b0c7d0d034b"
