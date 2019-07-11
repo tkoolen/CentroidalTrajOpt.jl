@@ -91,15 +91,13 @@ function set_state!(vis::CentroidalTrajectoryVisualizer, result::CentroidalTraje
     vis
 end
 
-function MeshCat.setanimation!(
+function MeshCat.Animation(
         cvis::CentroidalTrajectoryVisualizer,
-        result::CentroidalTrajectoryResult,
-        animation::Animation = Animation();
-        play::Bool=true,
-        repetitions::Integer=1)
-    fps = animation.default_framerate
+        result::CentroidalTrajectoryResult;
+        fps::Number=30)
     t0 = first(result.break_times)
     tf = last(result.break_times)
+    animation = Animation(fps)
     num_frames = floor(Int, (tf - t0) * fps)
     for frame in 0 : num_frames
         t = t0 + frame / fps
@@ -107,5 +105,5 @@ function MeshCat.setanimation!(
             set_state!(cvis, result, t)
         end
     end
-    setanimation!(cvis.vis, animation, play=play, repetitions=repetitions)
+    return animation
 end

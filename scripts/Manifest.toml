@@ -371,10 +371,10 @@ uuid = "4076af6c-e467-56ae-b986-b466b2749572"
 version = "0.19.2"
 
 [[Knockout]]
-deps = ["JSExpr", "JSON", "Observables", "Pkg", "Test", "WebIO"]
-git-tree-sha1 = "5cca7f070f85392cd0f42220c8ea5f7be96dacf4"
+deps = ["JSExpr", "JSON", "Observables", "Test", "WebIO"]
+git-tree-sha1 = "53533b51d4b6964eca3065b0834e9f61ed2f7515"
 uuid = "bcebb21b-c2e3-54f8-a781-646b90f6d2cc"
-version = "0.2.2"
+version = "0.2.3"
 
 [[Lazy]]
 deps = ["Compat", "MacroTools", "Test"]
@@ -461,15 +461,15 @@ version = "0.3.0"
 
 [[MeshCat]]
 deps = ["AssetRegistry", "Base64", "BinDeps", "Cassette", "Colors", "CoordinateTransformations", "DocStringExtensions", "GeometryTypes", "JSExpr", "LinearAlgebra", "MsgPack", "Mux", "Parameters", "Requires", "Rotations", "Sockets", "StaticArrays", "UUIDs", "WebIO"]
-git-tree-sha1 = "eb03c738cac3cab22ea850de8b4ef43b717262f2"
+git-tree-sha1 = "f2eec26553deedaddf535166c8c9cea6a86ebf46"
 repo-rev = "tk/develop"
 repo-url = "https://github.com/tkoolen/MeshCat.jl"
 uuid = "283c5d60-a78f-5afe-a0af-af636b173e11"
-version = "0.7.0"
+version = "0.8.0"
 
 [[MeshCatMechanisms]]
 deps = ["ColorTypes", "CoordinateTransformations", "GeometryTypes", "InteractBase", "Interpolations", "LoopThrottle", "MechanismGeometries", "MeshCat", "OrderedCollections", "RigidBodyDynamics"]
-git-tree-sha1 = "ba9f55ab9ce1f2ebdadeae41243e8057bf3bd2e7"
+git-tree-sha1 = "6d49d4d56c3f05758e4acf5c46f582ca0a500789"
 repo-rev = "tk/develop"
 repo-url = "https://github.com/JuliaRobotics/MeshCatMechanisms.jl.git"
 uuid = "6ad125db-dd91-5488-b820-c1df6aab299d"
@@ -716,7 +716,7 @@ version = "2.1.0"
 
 [[RigidBodySim]]
 deps = ["Blink", "DataStructures", "DiffEqBase", "DiffEqCallbacks", "DocStringExtensions", "InteractBase", "MeshCat", "MeshCatMechanisms", "Observables", "OrdinaryDiffEq", "Printf", "RigidBodyDynamics", "WebIO"]
-git-tree-sha1 = "2e290601a7922c56a85a2f1a63b653f02a8e7617"
+git-tree-sha1 = "de297ec0039926ecf724d5d6e824a14338fdf9ff"
 repo-rev = "tk/develop"
 repo-url = "https://github.com/JuliaRobotics/RigidBodySim.jl.git"
 uuid = "e61f16d8-a6b7-5689-8d03-627c2b27ebce"
@@ -853,10 +853,10 @@ uuid = "c4a57d5a-5b31-53a6-b365-19f8c011fbd6"
 version = "0.4.0"
 
 [[WebIO]]
-deps = ["AssetRegistry", "Base64", "Compat", "FunctionalCollections", "JSON", "Logging", "Observables", "Random", "Requires", "Sockets", "Test", "UUIDs", "Widgets"]
-git-tree-sha1 = "c1f259d4c23f12262f4fa69263a4e54fbea77450"
+deps = ["AssetRegistry", "Base64", "Compat", "Distributed", "FunctionalCollections", "JSON", "Logging", "Observables", "Random", "Requires", "Sockets", "UUIDs", "WebSockets", "Widgets"]
+git-tree-sha1 = "458ebbd85da851b01bed01e6321b0d8f4c7044b0"
 uuid = "0f1e0344-ec1d-5b48-a673-e5cf874b6c29"
-version = "0.7.0"
+version = "0.8.6"
 
 [[WebSockets]]
 deps = ["Base64", "Dates", "Distributed", "HTTP", "Logging", "Random", "Sockets", "Test"]

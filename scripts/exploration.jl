@@ -234,7 +234,7 @@ newvis = false
 if newvis || (!@isdefined vis) || isempty(vis.core.scope.pool.connections)
     vis = Visualizer()
     open(vis)
-    # wait(vis)
+    wait(vis)
 end
 delete!(vis)
 
@@ -351,8 +351,7 @@ for t in result.break_times
 end
 
 ## Plan Visualization
-animation = Animation()
-setanimation!(cvis, result, animation)
+plan_animation = Animation(cvis, result)
 
 ## Mode sequence
 # value.(problem.z_vars)
@@ -383,5 +382,9 @@ if simulate
 
     # simulate
     @time sol = RigidBodySim.solve(odeproblem, Tsit5(), abs_tol = 1e-8, dt = 1e-6, dtmax=1e-3);
-    setanimation!(mvis, sol, animation)
+    sim_animation = Animation(mvis, sol)
 end
+
+setanimation!(vis, plan_animation);
+setanimation!(vis, sim_animation);
+setanimation!(vis, merge(plan_animation, sim_animation));
