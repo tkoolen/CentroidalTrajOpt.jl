@@ -41,6 +41,7 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
         c0::AbstractVector{<:Number},
         ċ0::AbstractVector{<:Number},
         contacts0::AbstractVector{<:Union{Pair{<:ContactRegion, <:AbstractVector}, Nothing}};
+        cf = nothing,
         c_degree = 3,
         num_pieces = 2,
         g = SVector(0.0, 0.0, -9.81),
@@ -89,8 +90,8 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
         Δts = axis_array_vars(model, i -> "Δt[$i]", pieces)
         Δtsqs = axis_array_vars(model, i -> "Δtsq[$i]", pieces)
         for (Δt, Δtsq) in zip(Δts, Δtsqs)
-            Δtmin = 0.3
-            Δtmax = 1.0 # TODO
+            Δtmin = 0.7
+            Δtmax = 1.5 # TODO
             set_lower_bound(Δt, Δtmin)
             set_upper_bound(Δt, Δtmax)
             set_lower_bound(Δtsq, Δtmin^2)
@@ -196,13 +197,17 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
 
         # Initial conditions
         if i == 1
-            @constraint model map(x -> x(0), c) .== c0
+            fix.(map(x -> x.coeffs[1], c), c0, force=true)
+            # @constraint model map(x -> x(0), c) .== c0
             @constraint model map(x -> x(0), c′) .== ċ0 .* Δts[i]
         end
 
         # Final conditions
         if i == num_pieces
-            # @constraint model map(x -> x(1), c) .== c0 # TODO
+            if cf !== nothing
+                fix.(map(x -> x.coeffs[end], c), cf, force=true)
+                # @constraint model map(x -> x(1), c) .== cf
+            end
             @constraint model map(x -> x(1), c′) .== 0
             @constraint model map(x -> x(1), c′′) .== 0
         end
@@ -323,7 +328,7 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
             p = p_vars[piece, contact]
             for l in 1 : c_num_coeffs
                 cpoint = map(x -> x.coeffs[l], c)
-                @constraint model cpoint[3] - p[3] >= 0.6 # TODO
+                @constraint model cpoint[3] - p[3] >= 0.8 # TODO
                 # set_lower_bound(cpoint[3], 0.7)
                 # @constraint model cpoint - p .<= 1.5
                 # @constraint model p - cpoint .<= 1.5

@@ -60,14 +60,14 @@ function create_environment()
             0.7,
             0.0,
             Float64[1 0; 0 1; -1 0; 0 -1],
-            0.2 * ones(4)
+            0.4 * ones(4)
     ))
     push!(region_data, ContactRegion(
             AffineMap(one(RotMatrix{3}) * RotXYZ(0.1, -0.2, 0.3), SVector(1.0, 0.3, 0.2)),
             0.7,
             0.0,
             Float64[1 0; 0 1; -1 0; 0 -1],
-            0.4 * ones(4)
+            0.6 * ones(4)
     ))
     push!(region_data, ContactRegion(
             AffineMap(one(RotMatrix{3}) * RotXYZ(0.1, -0.2, 0.3), SVector(0.0, 1.0, 0.2)),
@@ -188,41 +188,12 @@ for i in eachindex(contacts0)
     end
 end
 
+## Final conditions
+cf = c0# + SVector(0.7, 0.3, 0.0)
+
 ## Additional settings
 g = mechanism.gravitational_acceleration.v
 max_cop_distance = 0.07
-
-## Optimizer
-# optimizer_factory = baron_optimizer_factory()
-optimizer_factory = scip_optimizer_factory()
-
-## Problem
-problem = CentroidalTrajectoryProblem(optimizer_factory, region_data, c0, ċ0, contacts0;
-    g=g, max_cop_distance=max_cop_distance, num_pieces=2, c_degree=3,
-    # objective_type=ObjectiveTypes.MIN_EXCURSION);
-    objective_type=ObjectiveTypes.FEASIBILITY);
-
-disallow_jumping!(problem)
-
-# fix.(problem.z_vars[:, :, 1], [1.0 1.0; 0.0 0.0; 0.0 0.0])
-# fix.(problem.z_vars[:, :, 2], [0.0 0.0; -0.0 -0.0; 1.0 1.0])
-
-if optimizer_factory.constructor == SCIP.Optimizer
-    problem.model.optimize_hook = function (model)
-        mscip = backend(model).optimizer.model.mscip
-        # SCIP.SCIPsetEmphasis(mscip, SCIP.SCIP_PARAMEMPHASIS_FEASIBILITY, true)
-        # SCIP.SCIPsetPresolving(mscip, SCIP.SCIP_PARAMSETTING_AGGRESSIVE, true)
-        # SCIP.SCIPsetHeuristics(mscip, SCIP.SCIP_PARAMSETTING_AGGRESSIVE, true)
-        MOI.optimize!(backend(model))
-        return
-    end
-end
-
-relax = optimizer_factory.constructor == Gurobi.Optimizer || optimizer_factory.constructor == CPLEX.Optimizer
-if relax
-    @info "Relaxing bilinearities."
-    relaxbilinear!(problem.model, method=:Logarithmic1D, disc_level=17, constraints_to_skip=problem.friction_cone_quadratic_constraints)
-end
 
 ## Create visualizer
 using MeshCat
@@ -244,12 +215,48 @@ copyto!(mvis, state0)
 ## Environment visualization
 setelement!(mvis, contact_model)
 
+sleep(1.)
+
+## Optimizer
+# optimizer_factory = baron_optimizer_factory()
+optimizer_factory = scip_optimizer_factory()
+
+## Problem
+problem = CentroidalTrajectoryProblem(optimizer_factory, region_data, c0, ċ0, contacts0;
+    cf=cf, g=g, max_cop_distance=max_cop_distance, num_pieces=3, c_degree=3,
+    # objective_type=ObjectiveTypes.MIN_EXCURSION);
+    objective_type=ObjectiveTypes.FEASIBILITY);
+
+disallow_jumping!(problem)
+
+# fix.(problem.z_vars[:, :, 1], [1.0 1.0; 0.0 0.0; 0.0 0.0])
+# fix.(problem.z_vars[:, :, 2], [0.0 0.0; -0.0 -0.0; 1.0 1.0])
+
+if optimizer_factory.constructor == SCIP.Optimizer
+    problem.model.optimize_hook = function (model)
+        mscip = backend(model).optimizer.model.mscip
+        SCIP.SCIPsetEmphasis(mscip, SCIP.SCIP_PARAMEMPHASIS_FEASIBILITY, true)
+        # SCIP.SCIPsetPresolving(mscip, SCIP.SCIP_PARAMSETTING_AGGRESSIVE, true)
+        # SCIP.SCIPsetHeuristics(mscip, SCIP.SCIP_PARAMSETTING_AGGRESSIVE, true)
+        MOI.optimize!(backend(model))
+        return
+    end
+end
+
+relax = optimizer_factory.constructor == Gurobi.Optimizer || optimizer_factory.constructor == CPLEX.Optimizer
+if relax
+    @info "Relaxing bilinearities."
+    relaxbilinear!(problem.model, method=:Logarithmic1D, disc_level=17, constraints_to_skip=problem.friction_cone_quadratic_constraints)
+end
+
 ## Feasibility
 result = CentroidalTrajOpt.solve!(problem);
 
 ## Result visualization
 set_com_trajectory!(cvis, result)
 set_state!(cvis, result, 0.0)
+plan_animation = Animation(cvis, result)
+setanimation!(vis, plan_animation)
 
 if backend(problem.model).optimizer.model isa SCIP.Optimizer
     mscip = backend(problem.model).optimizer.model.mscip
@@ -291,8 +298,8 @@ T = last(result.break_times)
 # Initial and final conditions
 @test c(0) ≈ c0 atol=1e-12
 @test ċ(0) ≈ ċ0 atol=1e-12
-@test ċ(T) ≈ zeros(3) atol=1e-12
-@test c̈(T) ≈ zeros(3) atol=1e-12
+# @test ċ(T) ≈ zeros(3) atol=1e-12
+# @test c̈(T) ≈ zeros(3) atol=1e-12
 
 for t in range(0, T, length=100)
     ftot = sum(fs[contact](t) for contact in problem.contacts.val)
@@ -346,9 +353,6 @@ for t in result.break_times
     @test ċ(t - 1e-8) ≈ ċ(t + 1e-8) atol=1e-5
 end
 
-## Plan Visualization
-plan_animation = Animation(cvis, result)
-
 ## Mode sequence
 # value.(problem.z_vars)
 
@@ -383,6 +387,6 @@ if simulate
     sim_animation = Animation(mvis, sol)
 end
 
-setanimation!(vis, plan_animation);
-setanimation!(vis, sim_animation);
+# setanimation!(vis, plan_animation);
+# setanimation!(vis, sim_animation);
 setanimation!(vis, merge(plan_animation, sim_animation));

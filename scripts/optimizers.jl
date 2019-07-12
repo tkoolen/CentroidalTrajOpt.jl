@@ -2,11 +2,12 @@ using JuMP
 
 using SCIP
 function scip_optimizer_factory()
-    with_optimizer(SCIP.Optimizer,
-        limits_gap=0.05, limits_time=10 * 60 * 60, display_verblevel=5,
-        display_width=120, history_valuebased=true, lp_threads=10, branching_preferbinary=true, lp_scaling=false,
-        branching_allfullstrong_priority=536870911, heuristics_multistart_freq=20, heuristics_multistart_onlynlps=false,
-        heuristics_mpec_priority=536870911)#heuristics_subnlp_priority=536870911)#, nlp_solver="ipopt", heuristics_nlpdiving_priority=536870911)#,;
+    with_optimizer(SCIP.Optimizer)
+    # with_optimizer(SCIP.Optimizer,
+    #     limits_gap=0.05, limits_time=10 * 60 * 60, display_verblevel=5,
+    #     display_width=120, history_valuebased=true, lp_threads=10, branching_preferbinary=true, lp_scaling=false,
+    #     branching_allfullstrong_priority=536870911, heuristics_multistart_freq=20, heuristics_multistart_onlynlps=false,
+    #     heuristics_mpec_priority=536870911)#heuristics_subnlp_priority=536870911)#, nlp_solver="ipopt", heuristics_nlpdiving_priority=536870911)#,;
 end
 
 using AmplNLWriter
