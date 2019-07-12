@@ -104,7 +104,7 @@ uuid = "7057c7e9-c182-5462-911a-8362d720325c"
 version = "0.2.4"
 
 [[CentroidalTrajOpt]]
-deps = ["AxisArrays", "ColorTypes", "CoordinateTransformations", "EnhancedGJK", "GeometryTypes", "JuMP", "LinearAlgebra", "MeshCat", "Polyhedra", "QPControl", "QPWalkingControl", "RigidBodyDynamics", "RigidBodySim", "Rotations", "SCIP", "StaticArrays", "StaticUnivariatePolynomials"]
+deps = ["AxisArrays", "ColorTypes", "CoordinateTransformations", "EnhancedGJK", "GeometryTypes", "JuMP", "LinearAlgebra", "MeshCat", "Polyhedra", "QPControl", "QPWalkingControl", "RigidBodySim", "Rotations", "SCIP", "StaticArrays", "StaticUnivariatePolynomials"]
 path = ".."
 uuid = "e21b34eb-f2c9-558f-afd6-4aa30e1b9e96"
 version = "0.1.0"
@@ -178,9 +178,9 @@ version = "2.5.2"
 
 [[DiffEqDiffTools]]
 deps = ["LinearAlgebra", "SparseArrays", "StaticArrays"]
-git-tree-sha1 = "2d4f49c1839c1f30e4820400d8c109c6b16e869a"
+git-tree-sha1 = "b992345a39b4d9681342ae795a8dacc100730182"
 uuid = "01453d9d-ee7c-5054-8395-0335cb756afa"
-version = "0.13.0"
+version = "0.14.0"
 
 [[DiffEqOperators]]
 deps = ["DiffEqBase", "ForwardDiff", "LinearAlgebra", "SparseArrays", "StaticArrays", "SuiteSparse"]
@@ -227,12 +227,6 @@ deps = ["LinearAlgebra", "Printf", "SparseArrays"]
 git-tree-sha1 = "85e1ce16aa9b98793df704e17e7a0ceadefe404f"
 uuid = "d4d017d3-3776-5f7e-afef-a10c40355c18"
 version = "1.5.1"
-
-[[FileIO]]
-deps = ["Pkg"]
-git-tree-sha1 = "351f001a78aa1b7ad2696e386e110b5abd071c71"
-uuid = "5789e2e9-d7fb-5bc7-8068-2c6fae9b9549"
-version = "1.0.7"
 
 [[FileWatching]]
 uuid = "7b1f6079-737a-58dc-b8bc-7a2ca5c1b5ee"
@@ -420,10 +414,10 @@ uuid = "39f5be34-8529-5463-bac7-bf6867c840a3"
 version = "0.1.0"
 
 [[MacroTools]]
-deps = ["CSTParser", "Compat", "DataStructures", "Test"]
-git-tree-sha1 = "daecd9e452f38297c686eba90dba2a6d5da52162"
+deps = ["CSTParser", "Compat", "DataStructures", "Test", "Tokenize"]
+git-tree-sha1 = "d6e9dedb8c92c3465575442da456aec15a89ff76"
 uuid = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
-version = "0.5.0"
+version = "0.5.1"
 
 [[Markdown]]
 deps = ["Base64"]
@@ -454,14 +448,14 @@ uuid = "442fdcdd-2543-5da2-b0f3-8c86c306513e"
 version = "0.3.0"
 
 [[MechanismGeometries]]
-deps = ["ColorTypes", "CoordinateTransformations", "FileIO", "GeometryTypes", "LightXML", "LinearAlgebra", "MeshIO", "RigidBodyDynamics", "Rotations", "StaticArrays"]
-git-tree-sha1 = "43106733e3915d071fd1567e1b19d4b1b2394da0"
+deps = ["ColorTypes", "CoordinateTransformations", "GeometryTypes", "LightXML", "LinearAlgebra", "RigidBodyDynamics", "Rotations", "StaticArrays"]
+git-tree-sha1 = "ee712529ec5db0b5d1c13606069fcea7f4e3e21a"
 uuid = "931e9471-e8fb-5385-a477-07ad12718aca"
-version = "0.3.0"
+version = "0.4.0"
 
 [[MeshCat]]
 deps = ["AssetRegistry", "Base64", "BinDeps", "Cassette", "Colors", "CoordinateTransformations", "DocStringExtensions", "GeometryTypes", "JSExpr", "LinearAlgebra", "MsgPack", "Mux", "Parameters", "Requires", "Rotations", "Sockets", "StaticArrays", "UUIDs", "WebIO"]
-git-tree-sha1 = "f2eec26553deedaddf535166c8c9cea6a86ebf46"
+git-tree-sha1 = "681c9751f1c98316f7c4bc21e7b61f72f6be1f8f"
 repo-rev = "tk/develop"
 repo-url = "https://github.com/tkoolen/MeshCat.jl"
 uuid = "283c5d60-a78f-5afe-a0af-af636b173e11"
@@ -469,17 +463,11 @@ version = "0.8.0"
 
 [[MeshCatMechanisms]]
 deps = ["ColorTypes", "CoordinateTransformations", "GeometryTypes", "InteractBase", "Interpolations", "LoopThrottle", "MechanismGeometries", "MeshCat", "OrderedCollections", "RigidBodyDynamics"]
-git-tree-sha1 = "6d49d4d56c3f05758e4acf5c46f582ca0a500789"
+git-tree-sha1 = "91ab43d5f9ac67a381b01b3362386bab4e0de1b8"
 repo-rev = "tk/develop"
 repo-url = "https://github.com/JuliaRobotics/MeshCatMechanisms.jl.git"
 uuid = "6ad125db-dd91-5488-b820-c1df6aab299d"
-version = "0.4.0"
-
-[[MeshIO]]
-deps = ["ColorTypes", "FileIO", "GeometryTypes", "Printf", "Test"]
-git-tree-sha1 = "3e01e12c4c626578a9d47fac0d15c9fe8dad5139"
-uuid = "7269a6da-0436-5bbc-96c2-40638cbb6118"
-version = "0.3.1"
+version = "0.5.0"
 
 [[Missings]]
 deps = ["SparseArrays", "Test"]
@@ -505,7 +493,7 @@ version = "0.2.1"
 [[MultilinearOpt]]
 deps = ["JuMP", "LinearAlgebra", "MathOptInterface", "PiecewiseLinearOpt"]
 git-tree-sha1 = "6b5c27fbf513a5d0e67b8de5dc9fce3d56dce9c7"
-repo-rev = "tk/quadratic-terms"
+repo-rev = "master"
 repo-url = "https://github.com/joehuchette/MultilinearOpt.jl.git"
 uuid = "056e1bd9-d272-5a02-876b-3036887dbe22"
 version = "0.0.0"
