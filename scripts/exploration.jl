@@ -28,6 +28,7 @@ using OSQP
 using MathOptInterface
 
 using QPControl.Trajectories: PointTrajectory
+using QPWalkingControl: PosePlan, set_pose_plan!
 
 using MeshCat: RGBA
 
@@ -144,12 +145,13 @@ function create_controller(
     linear_momentum_controller = PDCoMController(com_gains, PointTrajectory(world_frame, com_trajectory), mass(mechanism))
 
     # State machine
-    foot_pose_trajectories = map(enumerate(contact_body_ids)) do (i, bodyid)
-        pose0 = transform_to_root(state0, sole_frames[bodyid])
-        pose_trajectory(pose0, contact_position_trajectories[i], contact_indicator_trajectories[i], region_data)
-    end
     contacts = Dict(BodyID(body) => contact for (body, contact) in lowlevel.contacts)
-    state_machine = CoMTrackingStateMachine(mechanism, contacts) # TODO: pass in foot_pose_trajectories
+    state_machine = CoMTrackingStateMachine(mechanism, contacts)
+    for (i, bodyid) in enumerate(contact_body_ids)
+        pose0 = transform_to_root(state0, sole_frames[bodyid])
+        plan = PosePlan(pose0, contact_position_trajectories[i], contact_indicator_trajectories[i], region_data)
+        set_pose_plan!(state_machine, bodyid, plan)
+    end
 
     # High level controller
     HumanoidQPController(lowlevel, pelvis, nominal_state,
