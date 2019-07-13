@@ -376,11 +376,11 @@ if simulate
         mechanism,
         SumController(similar(velocity(state)), (pcontroller, damping));
         contact_model=contact_model)
-    callback = CallbackSet(RealtimeRateLimiter(poll_interval=pi / 100), CallbackSet(gui; max_fps=60))
+    callback = CallbackSet(RealtimeRateLimiter(poll_interval=pi / 100), )
     T = last(result.break_times)
     tspan = (0., T)
     contact_state = SoftContactState(contact_model)
-    odeproblem = ODEProblem(dynamics, (state, contact_state), tspan; callback=callback)
+    odeproblem = ODEProblem(dynamics, (state, contact_state), tspan; callback=CallbackSet(gui; max_fps=30))
 
     # simulate
     @time sol = RigidBodySim.solve(odeproblem, Tsit5(), abs_tol = 1e-8, dt = 1e-6, dtmax=1e-3);

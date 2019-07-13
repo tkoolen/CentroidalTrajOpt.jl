@@ -56,11 +56,10 @@ uuid = "9e28174c-4ba2-5203-b857-d8d62c4213ee"
 version = "0.8.10"
 
 [[BinaryProvider]]
-deps = ["Libdl", "SHA"]
+deps = ["Libdl", "Logging", "SHA"]
 git-tree-sha1 = "c7361ce8a2129f20b0e05a89f7070820cfed6648"
-pinned = true
 uuid = "b99e7846-7c00-51b0-8f62-c81ae34c0232"
-version = "0.5.4"
+version = "0.5.6"
 
 [[Blink]]
 deps = ["Base64", "BinDeps", "Distributed", "JSExpr", "JSON", "Lazy", "Libdl", "Logging", "MacroTools", "Mustache", "Mux", "Reexport", "Sockets", "Test", "WebIO", "WebSockets"]
@@ -166,9 +165,9 @@ uuid = "8bb1440f-4735-579b-a4ab-409b98df4dab"
 
 [[DiffEqBase]]
 deps = ["Compat", "Distributed", "DocStringExtensions", "FunctionWrappers", "IterativeSolvers", "IteratorInterfaceExtensions", "LinearAlgebra", "MuladdMacro", "Parameters", "RecipesBase", "RecursiveArrayTools", "RecursiveFactorization", "Requires", "Roots", "SparseArrays", "StaticArrays", "Statistics", "SuiteSparse", "TableTraits", "TreeViews"]
-git-tree-sha1 = "76b059cad5d43fd1fcfd7ffcd8ab5696d2027595"
+git-tree-sha1 = "6902d019588b3b8c3c6807d972037b19915f410f"
 uuid = "2b5f629d-d688-5b77-993f-72d75c75574e"
-version = "5.16.0"
+version = "5.16.1"
 
 [[DiffEqCallbacks]]
 deps = ["DataStructures", "DiffEqBase", "LinearAlgebra", "OrdinaryDiffEq", "RecipesBase", "RecursiveArrayTools", "StaticArrays", "Test"]
@@ -643,7 +642,9 @@ version = "0.1.0"
 
 [[QPWalkingControl]]
 deps = ["AtlasRobot", "Blink", "CoordinateTransformations", "EnhancedGJK", "GeometryTypes", "Interact", "InteractBase", "LightXML", "LinearAlgebra", "MathOptInterface", "MechanismGeometries", "MeshCat", "MeshCatMechanisms", "NamedColors", "OSQP", "Observables", "Parametron", "PlanarConvexHulls", "QPControl", "RigidBodyDynamics", "RigidBodySim", "Rotations", "StaticArrays", "StaticUnivariatePolynomials", "Test", "WebIO"]
-path = "/home/twan/.julia/dev/QPWalkingControl"
+git-tree-sha1 = "3985336a002cde708fc866a68577c5ce79283e9d"
+repo-rev = "tk/develop"
+repo-url = "git@github.com:tkoolen/QPWalkingControl.jl.git"
 uuid = "0b169a85-4a4a-588b-8c74-4a8044adc824"
 version = "0.1.0"
 
@@ -698,7 +699,9 @@ version = "0.5.2"
 
 [[RigidBodyDynamics]]
 deps = ["CoordinateTransformations", "DocStringExtensions", "EnhancedGJK", "GeometryTypes", "LightXML", "LinearAlgebra", "LoopThrottle", "Random", "Reexport", "Rotations", "SparseArrays", "StaticArrays", "TypeSortedCollections", "UnsafeArrays"]
-path = "/home/twan/.julia/dev/RigidBodyDynamics"
+git-tree-sha1 = "4c9f3c4c59898326b52eb67344bfb02e75f43d67"
+repo-rev = "tk/develop"
+repo-url = "https://github.com/JuliaRobotics/RigidBodyDynamics.jl.git"
 uuid = "366cf18f-59d5-5db9-a4de-86a9f6786172"
 version = "2.1.0"
 
