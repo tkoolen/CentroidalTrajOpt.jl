@@ -75,6 +75,11 @@ git-tree-sha1 = "f60954495a7afcee4136f78d1d60350abd37a409"
 uuid = "49dc2e85-a5d0-5ad3-a950-438e2897f1b9"
 version = "0.4.1"
 
+[[Cassette]]
+git-tree-sha1 = "2f5d4d747eb39ce6410438993e00ccd5a0f4bc27"
+uuid = "7057c7e9-c182-5462-911a-8362d720325c"
+version = "0.2.4"
+
 [[ColorTypes]]
 deps = ["FixedPointNumbers", "Random"]
 git-tree-sha1 = "10050a24b09e8e41b951e9976b109871ce98d965"
@@ -126,9 +131,9 @@ uuid = "8bb1440f-4735-579b-a4ab-409b98df4dab"
 
 [[DiffEqBase]]
 deps = ["Compat", "Distributed", "DocStringExtensions", "FunctionWrappers", "IterativeSolvers", "IteratorInterfaceExtensions", "LinearAlgebra", "MuladdMacro", "Parameters", "RecipesBase", "RecursiveArrayTools", "RecursiveFactorization", "Requires", "Roots", "SparseArrays", "StaticArrays", "Statistics", "SuiteSparse", "TableTraits", "TreeViews"]
-git-tree-sha1 = "76b059cad5d43fd1fcfd7ffcd8ab5696d2027595"
+git-tree-sha1 = "d96946472bbfb41ba04d26e6a6e9fb0d5d9f69cf"
 uuid = "2b5f629d-d688-5b77-993f-72d75c75574e"
-version = "5.16.0"
+version = "5.16.3"
 
 [[DiffEqCallbacks]]
 deps = ["DataStructures", "DiffEqBase", "LinearAlgebra", "OrdinaryDiffEq", "RecipesBase", "RecursiveArrayTools", "StaticArrays", "Test"]
@@ -138,9 +143,9 @@ version = "2.5.2"
 
 [[DiffEqDiffTools]]
 deps = ["LinearAlgebra", "SparseArrays", "StaticArrays"]
-git-tree-sha1 = "2d4f49c1839c1f30e4820400d8c109c6b16e869a"
+git-tree-sha1 = "b992345a39b4d9681342ae795a8dacc100730182"
 uuid = "01453d9d-ee7c-5054-8395-0335cb756afa"
-version = "0.13.0"
+version = "0.14.0"
 
 [[DiffEqOperators]]
 deps = ["DiffEqBase", "ForwardDiff", "LinearAlgebra", "SparseArrays", "StaticArrays", "SuiteSparse"]
@@ -187,12 +192,6 @@ deps = ["LinearAlgebra", "Printf", "SparseArrays"]
 git-tree-sha1 = "85e1ce16aa9b98793df704e17e7a0ceadefe404f"
 uuid = "d4d017d3-3776-5f7e-afef-a10c40355c18"
 version = "1.5.1"
-
-[[FileIO]]
-deps = ["Pkg"]
-git-tree-sha1 = "351f001a78aa1b7ad2696e386e110b5abd071c71"
-uuid = "5789e2e9-d7fb-5bc7-8068-2c6fae9b9549"
-version = "1.0.7"
 
 [[FileWatching]]
 uuid = "7b1f6079-737a-58dc-b8bc-7a2ca5c1b5ee"
@@ -356,10 +355,10 @@ uuid = "39f5be34-8529-5463-bac7-bf6867c840a3"
 version = "0.1.0"
 
 [[MacroTools]]
-deps = ["CSTParser", "Compat", "DataStructures", "Test"]
-git-tree-sha1 = "daecd9e452f38297c686eba90dba2a6d5da52162"
+deps = ["CSTParser", "Compat", "DataStructures", "Test", "Tokenize"]
+git-tree-sha1 = "d6e9dedb8c92c3465575442da456aec15a89ff76"
 uuid = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
-version = "0.5.0"
+version = "0.5.1"
 
 [[Markdown]]
 deps = ["Base64"]
@@ -390,14 +389,14 @@ uuid = "442fdcdd-2543-5da2-b0f3-8c86c306513e"
 version = "0.3.0"
 
 [[MechanismGeometries]]
-deps = ["ColorTypes", "CoordinateTransformations", "FileIO", "GeometryTypes", "LightXML", "LinearAlgebra", "MeshIO", "RigidBodyDynamics", "Rotations", "StaticArrays"]
-git-tree-sha1 = "43106733e3915d071fd1567e1b19d4b1b2394da0"
+deps = ["ColorTypes", "CoordinateTransformations", "GeometryTypes", "LightXML", "LinearAlgebra", "RigidBodyDynamics", "Rotations", "StaticArrays"]
+git-tree-sha1 = "ee712529ec5db0b5d1c13606069fcea7f4e3e21a"
 uuid = "931e9471-e8fb-5385-a477-07ad12718aca"
-version = "0.3.0"
+version = "0.4.0"
 
 [[MeshCat]]
-deps = ["AssetRegistry", "Base64", "BinDeps", "Colors", "CoordinateTransformations", "DocStringExtensions", "GeometryTypes", "JSExpr", "LinearAlgebra", "MsgPack", "Mux", "Parameters", "Requires", "Rotations", "Sockets", "StaticArrays", "UUIDs", "WebIO"]
-git-tree-sha1 = "76f89bb238297c8e3fdff0830207cce893736346"
+deps = ["AssetRegistry", "Base64", "BinDeps", "Cassette", "Colors", "CoordinateTransformations", "DocStringExtensions", "GeometryTypes", "JSExpr", "LinearAlgebra", "MsgPack", "Mux", "Parameters", "Requires", "Rotations", "Sockets", "StaticArrays", "UUIDs", "WebIO"]
+git-tree-sha1 = "9b81b0fc4c762d41bbc90b807872d7aa0db31b79"
 repo-rev = "master"
 repo-url = "https://github.com/rdeits/MeshCat.jl.git"
 uuid = "283c5d60-a78f-5afe-a0af-af636b173e11"
@@ -405,15 +404,9 @@ version = "0.8.0"
 
 [[MeshCatMechanisms]]
 deps = ["ColorTypes", "CoordinateTransformations", "GeometryTypes", "InteractBase", "Interpolations", "LoopThrottle", "MechanismGeometries", "MeshCat", "OrderedCollections", "RigidBodyDynamics"]
-git-tree-sha1 = "efab8e156448f388bd5ff02c60308179dd8b753c"
+git-tree-sha1 = "c85ed4b323036620295a70fa165678f8b0fc6f0c"
 uuid = "6ad125db-dd91-5488-b820-c1df6aab299d"
-version = "0.4.0"
-
-[[MeshIO]]
-deps = ["ColorTypes", "FileIO", "GeometryTypes", "Printf", "Test"]
-git-tree-sha1 = "3e01e12c4c626578a9d47fac0d15c9fe8dad5139"
-uuid = "7269a6da-0436-5bbc-96c2-40638cbb6118"
-version = "0.3.1"
+version = "0.5.0"
 
 [[Mmap]]
 uuid = "a63ad114-7e13-5084-954f-fe012c677804"
@@ -492,6 +485,7 @@ version = "1.1.0"
 [[OrdinaryDiffEq]]
 deps = ["DataStructures", "DiffEqBase", "DiffEqDiffTools", "DiffEqOperators", "ExponentialUtilities", "ForwardDiff", "GenericSVD", "LinearAlgebra", "Logging", "MuladdMacro", "NLsolve", "Parameters", "RecursiveArrayTools", "Reexport", "StaticArrays"]
 git-tree-sha1 = "77b2e1d2a7e172ee671acc827ff44060ef8d65c2"
+pinned = true
 uuid = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
 version = "5.11.1"
 
@@ -541,7 +535,7 @@ uuid = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 
 [[QPControl]]
 deps = ["LinearAlgebra", "MathOptInterface", "Parametron", "RigidBodyDynamics", "Rotations", "StaticArrays", "StaticUnivariatePolynomials"]
-git-tree-sha1 = "d5333a72fe97551b2e46a33b2708d6c14b3fb5dd"
+git-tree-sha1 = "dc43c4dca7290d30e00fa80b168e0f1196347b4d"
 repo-rev = "master"
 repo-url = "git@github.com:tkoolen/QPControl.jl.git"
 uuid = "d1d18edd-2826-5709-814b-0b0c7d0d034b"
@@ -549,7 +543,7 @@ version = "0.1.0"
 
 [[QPWalkingControl]]
 deps = ["AtlasRobot", "Blink", "CoordinateTransformations", "EnhancedGJK", "GeometryTypes", "Interact", "InteractBase", "LightXML", "LinearAlgebra", "MathOptInterface", "MechanismGeometries", "MeshCat", "MeshCatMechanisms", "NamedColors", "OSQP", "Observables", "Parametron", "PlanarConvexHulls", "QPControl", "RigidBodyDynamics", "RigidBodySim", "Rotations", "StaticArrays", "StaticUnivariatePolynomials", "Test", "WebIO"]
-git-tree-sha1 = "bf3645551ead872b16f62c38f28b114d93363a25"
+git-tree-sha1 = "3985336a002cde708fc866a68577c5ce79283e9d"
 repo-rev = "tk/develop"
 repo-url = "https://github.com/tkoolen/QPWalkingControl.jl.git"
 uuid = "0b169a85-4a4a-588b-8c74-4a8044adc824"
@@ -605,16 +599,16 @@ uuid = "ae029012-a4dd-5104-9daa-d747884805df"
 version = "0.5.2"
 
 [[RigidBodyDynamics]]
-deps = ["CoordinateTransformations", "DocStringExtensions", "EnhancedGJK", "GeometryTypes", "LightXML", "LinearAlgebra", "LoopThrottle", "Random", "Reexport", "Rotations", "SparseArrays", "StaticArrays", "TypeSortedCollections", "UnsafeArrays"]
-git-tree-sha1 = "4c9f3c4c59898326b52eb67344bfb02e75f43d67"
+deps = ["DocStringExtensions", "LightXML", "LinearAlgebra", "LoopThrottle", "Random", "Reexport", "Rotations", "SparseArrays", "StaticArrays", "TypeSortedCollections", "UnsafeArrays"]
+git-tree-sha1 = "8280c2e617f1872ab13bb9d077b83fa32b9659d4"
 repo-rev = "tk/develop"
 repo-url = "https://github.com/JuliaRobotics/RigidBodyDynamics.jl.git"
 uuid = "366cf18f-59d5-5db9-a4de-86a9f6786172"
 version = "2.1.0"
 
 [[RigidBodySim]]
-deps = ["Blink", "DataStructures", "DiffEqBase", "DiffEqCallbacks", "DocStringExtensions", "InteractBase", "MeshCatMechanisms", "Observables", "OrdinaryDiffEq", "Printf", "RigidBodyDynamics", "WebIO"]
-git-tree-sha1 = "4053236c9c43d7a183777e39186db03bd0e53efa"
+deps = ["Blink", "DataStructures", "DiffEqBase", "DiffEqCallbacks", "DocStringExtensions", "InteractBase", "MeshCat", "MeshCatMechanisms", "Observables", "OrdinaryDiffEq", "Printf", "RigidBodyDynamics", "WebIO"]
+git-tree-sha1 = "de297ec0039926ecf724d5d6e824a14338fdf9ff"
 repo-rev = "tk/develop"
 repo-url = "https://github.com/JuliaRobotics/RigidBodySim.jl.git"
 uuid = "e61f16d8-a6b7-5689-8d03-627c2b27ebce"
@@ -690,9 +684,9 @@ version = "1.0.0"
 
 [[Tables]]
 deps = ["DataValueInterfaces", "IteratorInterfaceExtensions", "LinearAlgebra", "Requires", "TableTraits", "Test"]
-git-tree-sha1 = "b983930602b75a14007c9c72e945b4a7c878c538"
+git-tree-sha1 = "2e5d1a0d9b574ee2ed0c1a2fe32807de022376dd"
 uuid = "bd369af6-aec1-5ad0-b16a-f7cc5008161c"
-version = "0.2.8"
+version = "0.2.9"
 
 [[Test]]
 deps = ["Distributed", "InteractiveUtils", "Logging", "Random"]

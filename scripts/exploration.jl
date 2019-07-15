@@ -60,21 +60,21 @@ function create_environment()
             0.7,
             0.0,
             Float64[1 0; 0 1; -1 0; 0 -1],
-            0.4 * ones(4)
+            [0.3, 0.3, 2.0, 2.0]
     ))
     push!(region_data, ContactRegion(
             AffineMap(one(RotMatrix{3}) * RotXYZ(0.1, -0.2, 0.3), SVector(1.0, 0.3, 0.2)),
             0.7,
             0.0,
             Float64[1 0; 0 1; -1 0; 0 -1],
-            0.6 * ones(4)
+            0.5 * ones(4)
     ))
     push!(region_data, ContactRegion(
             AffineMap(one(RotMatrix{3}) * RotXYZ(0.1, -0.2, 0.3), SVector(0.0, 1.0, 0.2)),
             0.7,
             0.0,
             Float64[1 0; 0 1; -1 0; 0 -1],
-            0.3 * ones(4)
+            0.2 * ones(4)
     ))
     region_data
 end
@@ -82,7 +82,7 @@ end
 function create_contact_model(
         mechanism::Mechanism,
         foot_points::AbstractDict{BodyID, <:AbstractVector{<:Point3D}},
-        region_data::Vector{<:ContactRegion})
+        region_data::Vector{<:ContactRegion}; region_offset=0.1)
     contact_model = ContactModel()
     normal_model = hunt_crossley_hertz(; k=500e3)
     k_tangential = 20e3
@@ -96,17 +96,29 @@ function create_contact_model(
         end
     end
     push!(contact_model, foot_collision_elements)
-    region_thickness = 0.2
-    for (i, region) in enumerate(region_data)
-        geometry = GLNormalMesh(polyhedron(extrude(hrep(region.A, region.b), region_thickness)))
-        frame = CartesianFrame3D("region_$i")
-        add_frame!(root_body(mechanism), Transform3D(frame, world_frame, region.transform))
-        element = CollisionElement(root_body(mechanism), frame, geometry)
-        group = CollisionElement[element]
+    debug_with_flat_ground = false
+    if debug_with_flat_ground
+        geometry = HalfSpace(SVector(0., 0., 1.), 0.0)
+        frame = world_frame
+        group = CollisionElement[CollisionElement(root_body(mechanism), frame, geometry)]
         push!(contact_model, group)
-        tangential_model = ViscoelasticCoulombModel(region.μ, k_tangential, b_tangential)
+        tangential_model = ViscoelasticCoulombModel(0.8, k_tangential, b_tangential)
         contact_force_model = SplitContactForceModel(normal_model, tangential_model)
         set_contact_force_model!(contact_model, foot_collision_elements, group, contact_force_model)
+    else
+        region_thickness = 1.0
+        for (i, region) in enumerate(region_data)
+            b̄ = region.b .+ flipsign.(region_offset, region.b) # FIXME
+            geometry = GLNormalMesh(polyhedron(extrude(hrep(region.A, b̄), region_thickness)))
+            frame = CartesianFrame3D("region_$i")
+            add_frame!(root_body(mechanism), Transform3D(frame, world_frame, region.transform))
+            element = CollisionElement(root_body(mechanism), frame, geometry)
+            group = CollisionElement[element]
+            push!(contact_model, group)
+            tangential_model = ViscoelasticCoulombModel(region.μ, k_tangential, b_tangential)
+            contact_force_model = SplitContactForceModel(normal_model, tangential_model)
+            set_contact_force_model!(contact_model, foot_collision_elements, group, contact_force_model)
+        end
     end
     return contact_model
 end
@@ -189,7 +201,7 @@ for i in eachindex(contacts0)
 end
 
 ## Final conditions
-cf = c0# + SVector(0.7, 0.3, 0.0)
+cf = c0 + SVector(0.7, 0.3, 0.0)
 
 ## Additional settings
 g = mechanism.gravitational_acceleration.v
@@ -200,8 +212,7 @@ using MeshCat
 newvis = false
 if newvis || (!@isdefined vis) || isempty(vis.core.scope.pool.connections)
     vis = Visualizer()
-    open(vis)
-    wait(vis)
+    # wait(vis)
 end
 delete!(vis)
 
@@ -210,11 +221,14 @@ cvis = CentroidalTrajectoryVisualizer(vis, region_data, norm(g), length(contacts
 
 ## Robot visualization
 mvis = MechanismVisualizer(mechanism, visuals, vis)
+gui = GUI(mvis)
 copyto!(mvis, state0)
 
 ## Environment visualization
-setelement!(mvis, contact_model)
+setelement!(mvis, contact_model)#, MeshLambertMaterial(color=RGBA(0.9, 0.9, 0.5, 0.95)))
 
+## Open
+open(gui)
 sleep(1.)
 
 ## Optimizer
@@ -223,7 +237,7 @@ optimizer_factory = scip_optimizer_factory()
 
 ## Problem
 problem = CentroidalTrajectoryProblem(optimizer_factory, region_data, c0, ċ0, contacts0;
-    cf=cf, g=g, max_cop_distance=max_cop_distance, num_pieces=3, c_degree=3,
+    cf=cf, g=g, max_cop_distance=max_cop_distance, num_pieces=5, c_degree=3,
     # objective_type=ObjectiveTypes.MIN_EXCURSION);
     objective_type=ObjectiveTypes.FEASIBILITY);
 
@@ -365,8 +379,6 @@ controller = create_controller(mechanism, contact_body_ids, floating_joint, foot
 ## Simulation
 simulate = true
 if simulate
-    gui = GUI(mvis);
-    open(gui)
     state = MechanismState(mechanism)
     copyto!(state, state0)
     Δt = 1 / 500
@@ -378,9 +390,9 @@ if simulate
         contact_model=contact_model)
     callback = CallbackSet(RealtimeRateLimiter(poll_interval=pi / 100), )
     T = last(result.break_times)
-    tspan = (0., T)
+    tspan = (0., T + 2)
     contact_state = SoftContactState(contact_model)
-    odeproblem = ODEProblem(dynamics, (state, contact_state), tspan; callback=CallbackSet(gui; max_fps=30))
+    odeproblem = ODEProblem(dynamics, (state, contact_state), tspan)#; callback=CallbackSet(gui; max_fps=30))
 
     # simulate
     @time sol = RigidBodySim.solve(odeproblem, Tsit5(), abs_tol = 1e-8, dt = 1e-6, dtmax=1e-3);

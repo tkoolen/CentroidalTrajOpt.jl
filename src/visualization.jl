@@ -39,6 +39,15 @@ function CentroidalTrajectoryVisualizer(vis::Visualizer,
         setobject!(contact_position_visualizer, HyperSphere(Point(0., 0, 0), 0.02), MeshLambertMaterial(color=RGB(0.1, 0.1, 0.1)))
         setvisible!(contact_position_visualizer, false)
     end
+
+    # Regions
+    for (i, region) in enumerate(region_data)
+        extruded = extrude(hrep(region.A, region.b), 1e-4; zmax=1e-4)
+        world_to_body = inv(region.transform)
+        geometry = GLNormalMesh(polyhedron(hrep(extruded.A * world_to_body.linear, extruded.b - extruded.A * world_to_body.translation)))
+        setobject!(vis["region_$i"], geometry, MeshLambertMaterial(color=RGB(0.5, 0.5, 0.5)))
+    end
+
     CentroidalTrajectoryVisualizer(vis, com_visualizer, region_data,
         force_visualizers, cone_visualizers, contact_position_visualizers, gravity_mag)
 end

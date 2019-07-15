@@ -44,14 +44,14 @@ using StaticUnivariatePolynomials: derivative
 const SUP = StaticUnivariatePolynomials
 
 import Polyhedra
-using Polyhedra: hrep, polyhedron, Mesh
+using Polyhedra: hrep, vrep, polyhedron, Mesh
 
 include("util.jl")
 include("region.jl")
 include("problem.jl")
 include("result.jl")
 
-using GeometryTypes: HyperSphere, Point, Vec
+using GeometryTypes: HyperSphere, Point, Vec, GLNormalMesh
 
 import MeshCat
 using MeshCat: Visualizer

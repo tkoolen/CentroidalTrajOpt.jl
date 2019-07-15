@@ -76,12 +76,12 @@ function constrain_l1_norm(model::JuMP.Model, x::AbstractVector{<:JuMP.AbstractJ
 end
 
 # Geometry utilities
-function extrude(polyhedron::Polyhedra.HRepresentation, thickness::Number)
+function extrude(polyhedron::Polyhedra.HRepresentation, thickness::Number; zmax=0)
     A = polyhedron.A
     b = polyhedron.b
     n = size(A, 1)
     Ā = [A zeros(n, 1); 0 0 1; 0 0 -1]
-    b̄ = [b; 0; thickness]
+    b̄ = [b; zmax; -zmax + thickness]
     hrep(Ā, b̄, polyhedron.linset)
 end
 
