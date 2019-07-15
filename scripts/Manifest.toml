@@ -103,7 +103,7 @@ uuid = "7057c7e9-c182-5462-911a-8362d720325c"
 version = "0.2.4"
 
 [[CentroidalTrajOpt]]
-deps = ["AxisArrays", "ColorTypes", "CoordinateTransformations", "EnhancedGJK", "GeometryTypes", "JuMP", "LinearAlgebra", "MeshCat", "Polyhedra", "QPControl", "QPWalkingControl", "RigidBodySim", "Rotations", "SCIP", "StaticArrays", "StaticUnivariatePolynomials"]
+deps = ["AxisArrays", "ColorTypes", "CoordinateTransformations", "EnhancedGJK", "GeometryTypes", "JuMP", "LinearAlgebra", "MeshCat", "OrdinaryDiffEq", "Polyhedra", "QPControl", "QPWalkingControl", "RigidBodySim", "Rotations", "SCIP", "StaticArrays", "StaticUnivariatePolynomials"]
 path = ".."
 uuid = "e21b34eb-f2c9-558f-afd6-4aa30e1b9e96"
 version = "0.1.0"
@@ -643,9 +643,7 @@ version = "0.1.0"
 
 [[QPWalkingControl]]
 deps = ["AtlasRobot", "Blink", "CoordinateTransformations", "EnhancedGJK", "GeometryTypes", "Interact", "InteractBase", "LightXML", "LinearAlgebra", "MathOptInterface", "MechanismGeometries", "MeshCat", "MeshCatMechanisms", "NamedColors", "OSQP", "Observables", "Parametron", "PlanarConvexHulls", "QPControl", "RigidBodyDynamics", "RigidBodySim", "Rotations", "StaticArrays", "StaticUnivariatePolynomials", "Test", "WebIO"]
-git-tree-sha1 = "105bb549a9470bfb410596d86e275893a919e444"
-repo-rev = "tk/develop"
-repo-url = "git@github.com:tkoolen/QPWalkingControl.jl.git"
+path = "/home/twan/.julia/dev/QPWalkingControl"
 uuid = "0b169a85-4a4a-588b-8c74-4a8044adc824"
 version = "0.1.0"
 

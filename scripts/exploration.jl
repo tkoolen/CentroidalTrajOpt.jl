@@ -60,31 +60,31 @@ function create_environment()
             0.7,
             0.0,
             Float64[1 0; 0 1; -1 0; 0 -1],
-            [0.3, 0.3, 2.0, 2.0]
+            [0.3, 0.3, 0.6, 0.6]
     ))
     push!(region_data, ContactRegion(
             AffineMap(one(RotMatrix{3}) * RotXYZ(0.1, -0.2, 0.3), SVector(1.0, 0.3, 0.2)),
             0.7,
             0.0,
             Float64[1 0; 0 1; -1 0; 0 -1],
-            0.5 * ones(4)
+            0.4 * ones(4)
     ))
-    push!(region_data, ContactRegion(
-            AffineMap(one(RotMatrix{3}) * RotXYZ(0.1, -0.2, 0.3), SVector(0.0, 1.0, 0.2)),
-            0.7,
-            0.0,
-            Float64[1 0; 0 1; -1 0; 0 -1],
-            0.2 * ones(4)
-    ))
+    # push!(region_data, ContactRegion(
+    #         AffineMap(one(RotMatrix{3}) * RotXYZ(0.1, -0.2, 0.3), SVector(0.0, 1.0, 0.2)),
+    #         0.7,
+    #         0.0,
+    #         Float64[1 0; 0 1; -1 0; 0 -1],
+    #         0.2 * ones(4)
+    # ))
     region_data
 end
 
 function create_contact_model(
         mechanism::Mechanism,
         foot_points::AbstractDict{BodyID, <:AbstractVector{<:Point3D}},
-        region_data::Vector{<:ContactRegion}; region_offset=0.1)
+        region_data::Vector{<:ContactRegion}; region_offset) # TODO
     contact_model = ContactModel()
-    normal_model = hunt_crossley_hertz(; k=500e3)
+    normal_model = hunt_crossley_hertz(; k=750e3)
     k_tangential = 20e3
     b_tangential = 100.#2 * sqrt(k_tangential * mass(mechanism) / 10)
     world_frame = root_frame(mechanism)
@@ -177,7 +177,7 @@ mechanism, state0, foot_points, sole_frames, floating_joint, pelvis, visuals = c
 region_data = create_environment()
 
 ## Collision setup
-contact_model = create_contact_model(mechanism, foot_points, region_data)
+contact_model = create_contact_model(mechanism, foot_points, region_data, region_offset=0.18) # TODO: get region offset from foot points
 
 ## Initial conditions
 c0 = center_of_mass(state0).v
@@ -201,11 +201,13 @@ for i in eachindex(contacts0)
 end
 
 ## Final conditions
-cf = c0 + SVector(0.7, 0.3, 0.0)
+cf = nothing
+# cf = c0# + SVector(0.8, 0.5, 0.05)
+# cf = c0 + SVector(0.05, 0.0, -0.05)
 
 ## Additional settings
 g = mechanism.gravitational_acceleration.v
-max_cop_distance = 0.07
+max_cop_distance = 0.062 # TODO: compute from contact points.
 
 ## Create visualizer
 using MeshCat
@@ -228,8 +230,10 @@ copyto!(mvis, state0)
 setelement!(mvis, contact_model)#, MeshLambertMaterial(color=RGBA(0.9, 0.9, 0.5, 0.95)))
 
 ## Open
-open(gui)
-sleep(1.)
+if isempty(vis.core.scope.pool.connections)
+    open(gui)
+    sleep(1.)
+end
 
 ## Optimizer
 # optimizer_factory = baron_optimizer_factory()
@@ -237,7 +241,7 @@ optimizer_factory = scip_optimizer_factory()
 
 ## Problem
 problem = CentroidalTrajectoryProblem(optimizer_factory, region_data, c0, ċ0, contacts0;
-    cf=cf, g=g, max_cop_distance=max_cop_distance, num_pieces=5, c_degree=3,
+    cf=cf, g=g, max_cop_distance=max_cop_distance, num_pieces=3, c_degree=3,
     # objective_type=ObjectiveTypes.MIN_EXCURSION);
     objective_type=ObjectiveTypes.FEASIBILITY);
 
@@ -278,14 +282,27 @@ if backend(problem.model).optimizer.model isa SCIP.Optimizer
     # SCIP.print_heuristic_statistics(mscip)
 end
 
-## Optimality
+# ## Re-optimize with final CoM constraint
+# cf_desired = c0 + SVector(-0.1, 0.0, -0.05)
+# let
+#     pieces = problem.pieces
+#     c_coeffs = problem.c_coeffs
+#     cf = problem.c_vars[pieces(last(pieces)), c_coeffs(last(c_coeffs))]
+#     JuMP.fix.(cf, cf_desired, force=true)
+# end
+# result = CentroidalTrajOpt.solve!(problem)
+# set_com_trajectory!(cvis, result)
+# plan_animation = Animation(cvis, result)
+# setanimation!(vis, plan_animation)
 
+## Optimality
 # Setting objective function straight away somehow prevents SCIP from finding a feasible point, so:
 # SCIP.SCIPsetEmphasis(problem.model.moi_backend.optimizer.model.mscip, SCIP.SCIP_PARAMEMPHASIS_OPTIMALITY, true);
+# set_objective!(problem.model, MOI.MIN_SENSE,
 # set_objective(problem.model, MOI.MAX_SENSE, sum(problem.z_vars))
 # result = solve!(problem);
 # set_objective(problem.model, MOI.MIN_SENSE, sum(problem.Δts))
-# result = solve!(problem);
+# result = CentroidalTrajOpt.solve!(problem);
 
 if optimizer_factory.constructor == BARON.Optimizer
     @info "BARON problem file: $(backend(problem.model).optimizer.model.optimizer.inner.problem_file_name)"
@@ -390,7 +407,7 @@ if simulate
         contact_model=contact_model)
     callback = CallbackSet(RealtimeRateLimiter(poll_interval=pi / 100), )
     T = last(result.break_times)
-    tspan = (0., T + 2)
+    tspan = (0., T + 1)
     contact_state = SoftContactState(contact_model)
     odeproblem = ODEProblem(dynamics, (state, contact_state), tspan)#; callback=CallbackSet(gui; max_fps=30))
 

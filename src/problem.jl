@@ -84,13 +84,13 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
     # l: coefficient index
     # m: region index
 
-    # Δts = AxisArray(fill(0.3, length(pieces)), pieces)
-    Δts = nothing
+    Δts = AxisArray(fill(0.5, length(pieces)), pieces)
+    # Δts = nothing
     if Δts === nothing
         Δts = axis_array_vars(model, i -> "Δt[$i]", pieces)
         Δtsqs = axis_array_vars(model, i -> "Δtsq[$i]", pieces)
         for (Δt, Δtsq) in zip(Δts, Δtsqs)
-            Δtmin = 0.7
+            Δtmin = 0.3
             Δtmax = 1.5 # TODO
             set_lower_bound(Δt, Δtmin)
             set_upper_bound(Δt, Δtmax)
@@ -241,7 +241,7 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
         constrain_poly_equal.(model, τ, 0)
 
         # CoP and contact position constraints
-        Mr = 2 # TODO
+        Mr = 2.0 # TODO
         for j in 1 : num_contacts
             contact = contacts(j)
             p = p_vars[piece, contact]
@@ -263,7 +263,7 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
                     coeff = r_coeffs(l)
                     r = r_vars[piece, contact, coeff]
                     r̄ = r̄_vars[piece, contact, coeff, region]
-                    @constraint model A * r̄ .<= b
+                    # @constraint model A * r̄ .<= b
                     @constraint model  (r - transform([r̄; 0])) .<= Mr * (1 - z)
                     @constraint model -(r - transform([r̄; 0])) .<= Mr * (1 - z)
                     if max_cop_distance == 0
@@ -333,7 +333,7 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
                 # @constraint model cpoint - p .<= 1.5
                 # @constraint model p - cpoint .<= 1.5
                 # @constraint model sum(x -> x^2, cpoint - p) >= 0.5^2 # TODO
-                @constraint model sum(x -> x^2, cpoint - p) <= 1.2^2 # TODO
+                @constraint model sum(x -> x^2, cpoint - p) <= 1.15^2 # TODO
             end
         end
 

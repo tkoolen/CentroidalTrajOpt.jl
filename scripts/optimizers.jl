@@ -2,7 +2,7 @@ using JuMP
 
 using SCIP
 function scip_optimizer_factory()
-    with_optimizer(SCIP.Optimizer)
+    with_optimizer(SCIP.Optimizer, limits_time=10 * 60 * 60)
     # with_optimizer(SCIP.Optimizer,
     #     limits_gap=0.05, limits_time=10 * 60 * 60, display_verblevel=5,
     #     display_width=120, history_valuebased=true, lp_threads=10, branching_preferbinary=true, lp_scaling=false,
