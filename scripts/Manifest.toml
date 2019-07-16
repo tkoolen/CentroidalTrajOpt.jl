@@ -649,7 +649,9 @@ version = "0.1.0"
 
 [[QPWalkingControl]]
 deps = ["AtlasRobot", "Blink", "CoordinateTransformations", "EnhancedGJK", "GeometryTypes", "Interact", "InteractBase", "LightXML", "LinearAlgebra", "MathOptInterface", "MechanismGeometries", "MeshCat", "MeshCatMechanisms", "NamedColors", "OSQP", "Observables", "Parametron", "PlanarConvexHulls", "QPControl", "RigidBodyDynamics", "RigidBodySim", "Rotations", "StaticArrays", "StaticUnivariatePolynomials", "Test", "WebIO"]
-path = "/home/twan/.julia/dev/QPWalkingControl"
+git-tree-sha1 = "a7934fe055a32e1c565ba19aed3936c18d5d52c4"
+repo-rev = "tk/develop"
+repo-url = "git@github.com:tkoolen/QPWalkingControl.jl.git"
 uuid = "0b169a85-4a4a-588b-8c74-4a8044adc824"
 version = "0.1.0"
 

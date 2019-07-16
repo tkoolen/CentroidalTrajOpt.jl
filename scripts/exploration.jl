@@ -67,7 +67,7 @@ function create_environment()
             0.15 * ones(4)
     ))
     push!(region_data, ContactRegion(
-            AffineMap(one(RotMatrix{3}) * RotXYZ(0.1, -0.2, 0.3), SVector(0.8, 0.3, 0.2)),
+            AffineMap(one(RotMatrix{3}) * RotXYZ(0.1, -0.2, 0.3), SVector(0.8, 0.3, 0.0)),
             0.7,
             0.0,
             Float64[1 0; 0 1; -1 0; 0 -1],
@@ -88,8 +88,8 @@ function create_contact_model(
         foot_points::AbstractDict{BodyID, <:AbstractVector{<:Point3D}},
         region_data::Vector{<:ContactRegion}; region_offset) # TODO
     contact_model = ContactModel()
-    normal_model = hunt_crossley_hertz(; k=750e3)
-    k_tangential = 10e3
+    normal_model = hunt_crossley_hertz(; k=300e3)
+    k_tangential = 7e3
     b_tangential = 2 * sqrt(k_tangential * mass(mechanism) / 10)
     world_frame = root_frame(mechanism)
     foot_collision_elements = CollisionElement[]
@@ -405,15 +405,15 @@ end
 ## Mode sequence
 # value.(problem.z_vars)
 
-## Controller
-μ_control = 0.7
-nominal_state = state0 # TODO
-controller = create_controller(mechanism, contact_body_ids, floating_joint, foot_points, sole_frames, μ_control, pelvis,
-    state0, nominal_state, result.center_of_mass, result.contact_positions, result.contact_indicators);
-
 ## Simulation
 simulate = true
 if simulate
+    ## Controller
+    μ_control = 0.7
+    nominal_state = state0 # TODO
+    controller = create_controller(mechanism, contact_body_ids, floating_joint, foot_points, sole_frames, μ_control, pelvis,
+        state0, nominal_state, result.center_of_mass, result.contact_positions, result.contact_indicators);
+
     state = MechanismState(mechanism)
     copyto!(state, state0)
     Δt = 1 / 500
@@ -431,10 +431,10 @@ if simulate
     odeproblem = ODEProblem(dynamics, (state, contact_state), tspan)
 
     # simulate
-    @time sol = RigidBodySim.solve(odeproblem, Tsit5(), abs_tol = 1e-8, dt = 1e-6, dtmax=5e-4);
+    @time sol = RigidBodySim.solve(odeproblem, Tsit5(), abs_tol = 1e-8, dt = 1e-6, dtmin=1e-7, dtmax=1e-4);
     sim_animation = Animation(mvis, sol)
-end
 
-# setanimation!(vis, plan_animation);
-setanimation!(vis, sim_animation);
-# setanimation!(vis, merge(plan_animation, sim_animation));
+    # setanimation!(vis, plan_animation);
+    setanimation!(vis, sim_animation);
+    setanimation!(vis, merge(plan_animation, sim_animation));
+end
