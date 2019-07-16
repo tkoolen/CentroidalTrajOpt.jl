@@ -48,9 +48,11 @@ function create_atlas()
     foot_points = AtlasRobot.foot_contact_points(mechanism)
     sole_frames = AtlasRobot.add_sole_frames!(mechanism)
     nominal_state = MechanismState(mechanism)
-    AtlasRobot.setnominal!(nominal_state)
+    AtlasRobot.setnominal!(nominal_state; kneebend=1.6)
     floating_joint = first(joints(mechanism))
-    configuration(nominal_state, floating_joint)[end] += -0.0028061189941; # FIXME
+    Δz = translation(transform_to_root(nominal_state, first(values(sole_frames))))[3]
+    configuration(nominal_state, floating_joint)[end] -= Δz
+    setdirty!(nominal_state)
     pelvis = findbody(mechanism, "pelvis");
     mechanism, nominal_state, foot_points, sole_frames, floating_joint, pelvis, visuals
 end
@@ -65,7 +67,7 @@ function create_environment()
             0.15 * ones(4)
     ))
     push!(region_data, ContactRegion(
-            AffineMap(one(RotMatrix{3}) * RotXYZ(0.1, -0.2, 0.3), SVector(0.7, 0.3, 0.2)),
+            AffineMap(one(RotMatrix{3}) * RotXYZ(0.1, -0.2, 0.3), SVector(0.8, 0.3, 0.2)),
             0.7,
             0.0,
             Float64[1 0; 0 1; -1 0; 0 -1],
@@ -87,8 +89,8 @@ function create_contact_model(
         region_data::Vector{<:ContactRegion}; region_offset) # TODO
     contact_model = ContactModel()
     normal_model = hunt_crossley_hertz(; k=750e3)
-    k_tangential = 5e3
-    b_tangential = 100.0#2 * sqrt(k_tangential * mass(mechanism) / 10)
+    k_tangential = 10e3
+    b_tangential = 2 * sqrt(k_tangential * mass(mechanism) / 10)
     world_frame = root_frame(mechanism)
     foot_collision_elements = CollisionElement[]
     for (bodyid, points) in foot_points
@@ -179,7 +181,7 @@ mechanism, state0, foot_points, sole_frames, floating_joint, pelvis, visuals = c
 region_data = create_environment()
 
 ## Collision setup
-contact_model = create_contact_model(mechanism, foot_points, region_data, region_offset=0.18) # TODO: get region offset from foot points
+contact_model = create_contact_model(mechanism, foot_points, region_data, region_offset=0.20) # TODO: get region offset from foot points
 
 ## Initial conditions
 c0 = center_of_mass(state0).v
@@ -189,17 +191,7 @@ contact_body_ids = sort(collect(keys(sole_frames)), by=x -> x.value) # establish
 contacts0 = map(contact_body_ids) do bodyid # TODO
     sole_frame = sole_frames[bodyid]
     p0 = translation(transform_to_root(state0, sole_frame))
-    @assert norm(c0 - p0) <= 1.2 # TODO: integrate with kinematic limits
     region_data[1] => p0
-end
-for i in eachindex(contacts0)
-    p_i_0 = last(contacts0[i])
-    for j in eachindex(contacts0)
-        p_j_0 = last(contacts0[j])
-        if i != j
-            @assert norm(p_i_0 - p_j_0) >= 0.1 # TODO: integrate with kinematic limits
-        end
-    end
 end
 
 ## Final conditions
@@ -210,6 +202,21 @@ cf = nothing
 ## Additional settings
 g = mechanism.gravitational_acceleration.v
 max_cop_distance = 0.062 # TODO: compute from contact points.
+max_com_to_contact_distance = 1.1
+min_inter_contact_distance = 0.10
+
+## Basic initial state feasibility checks
+for i in eachindex(contacts0)
+    p_i_0 = last(contacts0[i])
+    @assert norm(c0 - p_i_0) <= max_com_to_contact_distance # TODO: integrate with kinematic limits
+
+    for j in eachindex(contacts0)
+        p_j_0 = last(contacts0[j])
+        if i != j
+            @assert norm(p_i_0 - p_j_0) >= min_inter_contact_distance # TODO: integrate with kinematic limits
+        end
+    end
+end
 
 ## Create visualizer
 using MeshCat
@@ -243,14 +250,16 @@ optimizer_factory = scip_optimizer_factory()
 
 ## Problem
 problem = CentroidalTrajectoryProblem(optimizer_factory, region_data, c0, ċ0, contacts0;
-    cf=cf, g=g, max_cop_distance=max_cop_distance, num_pieces=5, c_degree=3,
+    cf=cf, g=g,
+    max_cop_distance=max_cop_distance, max_com_to_contact_distance=max_com_to_contact_distance, min_inter_contact_distance=min_inter_contact_distance,
+    num_pieces=5, c_degree=3,
     # objective_type=ObjectiveTypes.MIN_EXCURSION);
     objective_type=ObjectiveTypes.FEASIBILITY);
 
 disallow_jumping!(problem)
 
-# fix.(problem.z_vars[:, :, 1], [1.0 1.0; 0.0 0.0; 0.0 0.0])
-# fix.(problem.z_vars[:, :, 2], [0.0 0.0; -0.0 -0.0; 1.0 1.0])
+# step to region 2 with both feet
+fix.(problem.z_vars[problem.pieces(problem.pieces[end]), problem.regions(problem.regions[2])], 1.0)
 
 if optimizer_factory.constructor == SCIP.Optimizer
     problem.model.optimize_hook = function (model)
@@ -272,6 +281,7 @@ end
 ## Feasibility
 result = CentroidalTrajOpt.solve!(problem);
 
+
 ## Result visualization
 set_com_trajectory!(cvis, result)
 set_state!(cvis, result, 0.0)
@@ -286,17 +296,17 @@ end
 
 reoptimize = false
 if reoptimize
-    ## Re-optimize with final CoM constraint
-    cx_desired = c0[1] + 0.5
-    # cy_desired = c0[2] + 0.5
-    let
-        pieces = problem.pieces
-        c_coeffs = problem.c_coeffs
-        cf = problem.c_vars[pieces(last(pieces)), c_coeffs(last(c_coeffs))]
-        JuMP.fix(cf[1], cx_desired, force=true)
-        # JuMP.fix(cf[2], cy_desired, force=true)
-        # JuMP.fix.(cf, cf_desired, force=true)
-    end
+    # ## Re-optimize with final CoM constraint
+    # cx_desired = c0[1] + 0.5
+    # # cy_desired = c0[2] + 0.5
+    # let
+    #     pieces = problem.pieces
+    #     c_coeffs = problem.c_coeffs
+    #     cf = problem.c_vars[pieces(last(pieces)), c_coeffs(last(c_coeffs))]
+    #     JuMP.fix(cf[1], cx_desired, force=true)
+    #     # JuMP.fix(cf[2], cy_desired, force=true)
+    #     # JuMP.fix.(cf, cf_desired, force=true)
+    # end
     result = CentroidalTrajOpt.solve!(problem)
 end
 set_com_trajectory!(cvis, result)
@@ -421,10 +431,10 @@ if simulate
     odeproblem = ODEProblem(dynamics, (state, contact_state), tspan)
 
     # simulate
-    @time sol = RigidBodySim.solve(odeproblem, Tsit5(), abs_tol = 1e-8, dt = 1e-6, dtmax=1e-3);
+    @time sol = RigidBodySim.solve(odeproblem, Tsit5(), abs_tol = 1e-8, dt = 1e-6, dtmax=5e-4);
     sim_animation = Animation(mvis, sol)
 end
 
 # setanimation!(vis, plan_animation);
-# setanimation!(vis, sim_animation);
-setanimation!(vis, merge(plan_animation, sim_animation));
+setanimation!(vis, sim_animation);
+# setanimation!(vis, merge(plan_animation, sim_animation));

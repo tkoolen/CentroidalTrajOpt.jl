@@ -20,7 +20,7 @@ version = "0.1.0"
 
 [[AtlasRobot]]
 deps = ["RigidBodyDynamics", "StaticArrays"]
-git-tree-sha1 = "c53b78dc6c0fdf9773d28a3ab34056f9b5a4ecd1"
+git-tree-sha1 = "acb3995813f54ec162e22f507dbb987970f50d73"
 repo-rev = "tk/develop"
 repo-url = "https://github.com/tkoolen/AtlasRobot.jl.git"
 uuid = "436ed74b-f7b6-57fe-bd82-efdbd6c0ab0c"

@@ -46,6 +46,8 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
         num_pieces = 2,
         g = SVector(0.0, 0.0, -9.81),
         max_cop_distance = 0.1,
+        max_com_to_contact_distance,
+        min_inter_contact_distance,
         objective_type::ObjectiveType = FEASIBILITY
     )
 
@@ -84,13 +86,13 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
     # l: coefficient index
     # m: region index
 
-    Δts = AxisArray(fill(0.5, length(pieces)), pieces)
-    # Δts = nothing
+    # Δts = AxisArray(fill(0.7, length(pieces)), pieces)
+    Δts = nothing
     if Δts === nothing
         Δts = axis_array_vars(model, i -> "Δt[$i]", pieces)
         Δtsqs = axis_array_vars(model, i -> "Δtsq[$i]", pieces)
         for (Δt, Δtsq) in zip(Δts, Δtsqs)
-            Δtmin = 0.3
+            Δtmin = 0.6
             Δtmax = 1.5 # TODO
             set_lower_bound(Δt, Δtmin)
             set_upper_bound(Δt, Δtmax)
@@ -328,12 +330,12 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
             p = p_vars[piece, contact]
             for l in 1 : c_num_coeffs
                 cpoint = map(x -> x.coeffs[l], c)
-                @constraint model cpoint[3] - p[3] >= 0.8 # TODO
+                @constraint model cpoint[3] - p[3] >= 0.7 # TODO
                 # set_lower_bound(cpoint[3], 0.7)
                 # @constraint model cpoint - p .<= 1.5
                 # @constraint model p - cpoint .<= 1.5
                 # @constraint model sum(x -> x^2, cpoint - p) >= 0.5^2 # TODO
-                @constraint model sum(x -> x^2, cpoint - p) <= 1.15^2 # TODO
+                @constraint model sum(x -> x^2, cpoint - p) <= max_com_to_contact_distance^2
             end
         end
 
@@ -344,7 +346,7 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
             for j2 in j1 + 1 : num_contacts
                 contact2 = contacts(j2)
                 p2 = p_vars[piece, contact2]
-                @constraint model sum(x -> x^2, (p1 - p2)) >= 0.1^2 # TODO: parameterize
+                @constraint model sum(x -> x^2, (p1 - p2)) >= min_inter_contact_distance^2
             end
         end
 
