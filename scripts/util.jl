@@ -5,6 +5,20 @@ function center_of_mass_velocity(state::MechanismState)
     FreeVector3D(h.frame, linear(h)) / mass(state.mechanism)
 end
 
+## hrep conversion
+function RigidBodyDynamics.Contact.HRep(hr::Polyhedra.HRepresentation)
+    M = Polyhedra.nhalfspaces(hr)
+    N = Polyhedra.fulldim(hr)
+    return map(Polyhedra.halfspaces(hr)) do halfspace
+        RigidBodyDynamics.Contact.HalfSpace(SVector{N}(halfspace.a), halfspace.β)
+    end |> SVector{M} |> RigidBodyDynamics.Contact.HRep
+end
+
+function Polyhedra.hrep(hr::RigidBodyDynamics.Contact.HRep)
+    # hrep(Vector([Polyhedra.HalfSpace(halfspace.outward_normal, halfspace.offset) for halfspace in hr.halfspaces]))
+    hrep([Polyhedra.HalfSpace(halfspace.outward_normal, halfspace.offset) for halfspace in hr.halfspaces])
+end
+
 ## setelement! for ContactModel
 using MeshCatMechanisms, RigidBodyDynamics
 function MeshCatMechanisms.setelement!(mvis::MechanismVisualizer, contact_model::ContactModel, args...; base_name="collision element ")
@@ -12,9 +26,11 @@ function MeshCatMechanisms.setelement!(mvis::MechanismVisualizer, contact_model:
     for group in contact_model.collision_groups
         for element in group
             geometry = element.geometry
+            frame = element.transform.from
             if geometry isa MeshCatMechanisms.GeometryLike
-                frame = element.transform.from
                 setelement!(mvis, frame, element.geometry, args...)
+            elseif geometry isa Contact.HRep
+                setelement!(mvis, frame, GLNormalMesh(polyhedron(hrep(geometry))))
             end
         end
     end

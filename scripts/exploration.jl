@@ -30,6 +30,8 @@ using MathOptInterface
 using QPControl.Trajectories: PointTrajectory
 using QPWalkingControl: PosePlan, set_pose_plan!
 
+import Polyhedra
+
 using MeshCat: RGBA
 
 const MOI = MathOptInterface
@@ -60,14 +62,14 @@ function create_environment()
             0.7,
             0.0,
             Float64[1 0; 0 1; -1 0; 0 -1],
-            [0.3, 0.3, 0.6, 0.6]
+            0.15 * ones(4)
     ))
     push!(region_data, ContactRegion(
-            AffineMap(one(RotMatrix{3}) * RotXYZ(0.1, -0.2, 0.3), SVector(1.0, 0.3, 0.2)),
+            AffineMap(one(RotMatrix{3}) * RotXYZ(0.1, -0.2, 0.3), SVector(0.7, 0.3, 0.2)),
             0.7,
             0.0,
             Float64[1 0; 0 1; -1 0; 0 -1],
-            0.4 * ones(4)
+            0.2 * ones(4)
     ))
     # push!(region_data, ContactRegion(
     #         AffineMap(one(RotMatrix{3}) * RotXYZ(0.1, -0.2, 0.3), SVector(0.0, 1.0, 0.2)),
@@ -85,8 +87,8 @@ function create_contact_model(
         region_data::Vector{<:ContactRegion}; region_offset) # TODO
     contact_model = ContactModel()
     normal_model = hunt_crossley_hertz(; k=750e3)
-    k_tangential = 20e3
-    b_tangential = 100.#2 * sqrt(k_tangential * mass(mechanism) / 10)
+    k_tangential = 5e3
+    b_tangential = 100.0#2 * sqrt(k_tangential * mass(mechanism) / 10)
     world_frame = root_frame(mechanism)
     foot_collision_elements = CollisionElement[]
     for (bodyid, points) in foot_points
@@ -109,7 +111,7 @@ function create_contact_model(
         region_thickness = 1.0
         for (i, region) in enumerate(region_data)
             b̄ = region.b .+ flipsign.(region_offset, region.b) # FIXME
-            geometry = GLNormalMesh(polyhedron(extrude(hrep(region.A, b̄), region_thickness)))
+            geometry = Contact.HRep(extrude(hrep(region.A, b̄), region_thickness))
             frame = CartesianFrame3D("region_$i")
             add_frame!(root_body(mechanism), Transform3D(frame, world_frame, region.transform))
             element = CollisionElement(root_body(mechanism), frame, geometry)
@@ -227,7 +229,7 @@ gui = GUI(mvis)
 copyto!(mvis, state0)
 
 ## Environment visualization
-setelement!(mvis, contact_model)#, MeshLambertMaterial(color=RGBA(0.9, 0.9, 0.5, 0.95)))
+@time setelement!(mvis, contact_model)#, MeshLambertMaterial(color=RGBA(0.9, 0.9, 0.5, 0.95)))
 
 ## Open
 if isempty(vis.core.scope.pool.connections)
@@ -241,7 +243,7 @@ optimizer_factory = scip_optimizer_factory()
 
 ## Problem
 problem = CentroidalTrajectoryProblem(optimizer_factory, region_data, c0, ċ0, contacts0;
-    cf=cf, g=g, max_cop_distance=max_cop_distance, num_pieces=3, c_degree=3,
+    cf=cf, g=g, max_cop_distance=max_cop_distance, num_pieces=5, c_degree=3,
     # objective_type=ObjectiveTypes.MIN_EXCURSION);
     objective_type=ObjectiveTypes.FEASIBILITY);
 
@@ -282,18 +284,24 @@ if backend(problem.model).optimizer.model isa SCIP.Optimizer
     # SCIP.print_heuristic_statistics(mscip)
 end
 
-# ## Re-optimize with final CoM constraint
-# cf_desired = c0 + SVector(-0.1, 0.0, -0.05)
-# let
-#     pieces = problem.pieces
-#     c_coeffs = problem.c_coeffs
-#     cf = problem.c_vars[pieces(last(pieces)), c_coeffs(last(c_coeffs))]
-#     JuMP.fix.(cf, cf_desired, force=true)
-# end
-# result = CentroidalTrajOpt.solve!(problem)
-# set_com_trajectory!(cvis, result)
-# plan_animation = Animation(cvis, result)
-# setanimation!(vis, plan_animation)
+reoptimize = false
+if reoptimize
+    ## Re-optimize with final CoM constraint
+    cx_desired = c0[1] + 0.5
+    # cy_desired = c0[2] + 0.5
+    let
+        pieces = problem.pieces
+        c_coeffs = problem.c_coeffs
+        cf = problem.c_vars[pieces(last(pieces)), c_coeffs(last(c_coeffs))]
+        JuMP.fix(cf[1], cx_desired, force=true)
+        # JuMP.fix(cf[2], cy_desired, force=true)
+        # JuMP.fix.(cf, cf_desired, force=true)
+    end
+    result = CentroidalTrajOpt.solve!(problem)
+end
+set_com_trajectory!(cvis, result)
+plan_animation = Animation(cvis, result)
+setanimation!(vis, plan_animation)
 
 ## Optimality
 # Setting objective function straight away somehow prevents SCIP from finding a feasible point, so:
@@ -405,11 +413,12 @@ if simulate
         mechanism,
         SumController(similar(velocity(state)), (pcontroller, damping));
         contact_model=contact_model)
-    callback = CallbackSet(RealtimeRateLimiter(poll_interval=pi / 100), )
+    # callback = CallbackSet(RealtimeRateLimiter(poll_interval=pi / 100), )
+    # callback=CallbackSet(gui; max_fps=30))
     T = last(result.break_times)
     tspan = (0., T + 1)
     contact_state = SoftContactState(contact_model)
-    odeproblem = ODEProblem(dynamics, (state, contact_state), tspan)#; callback=CallbackSet(gui; max_fps=30))
+    odeproblem = ODEProblem(dynamics, (state, contact_state), tspan)
 
     # simulate
     @time sol = RigidBodySim.solve(odeproblem, Tsit5(), abs_tol = 1e-8, dt = 1e-6, dtmax=1e-3);
