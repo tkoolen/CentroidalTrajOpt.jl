@@ -203,7 +203,7 @@ cf = nothing
 g = mechanism.gravitational_acceleration.v
 max_cop_distance = 0.062 # TODO: compute from contact points.
 max_com_to_contact_distance = 1.1
-min_inter_contact_distance = 0.10
+min_inter_contact_distance = 0.15 # TODO: compute from contact points
 
 ## Basic initial state feasibility checks
 for i in eachindex(contacts0)
@@ -403,9 +403,6 @@ for t in result.break_times
     @test c(t - 1e-8) ≈ c(t + 1e-8) atol=1e-5
     @test ċ(t - 1e-8) ≈ ċ(t + 1e-8) atol=1e-5
 end
-
-## Mode sequence
-# value.(problem.z_vars)
 
 ## Simulation
 simulate = true
