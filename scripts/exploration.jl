@@ -67,19 +67,19 @@ function create_environment()
             0.15 * ones(4)
     ))
     push!(region_data, ContactRegion(
-            AffineMap(one(RotMatrix{3}) * RotXYZ(0.1, -0.2, 0.3), SVector(0.8, 0.3, 0.0)),
+            AffineMap(one(RotMatrix{3}) * RotXYZ(0.1, -0.2, 0.3), SVector(0.7, 0.3, 0.2)),
             0.7,
             0.0,
             Float64[1 0; 0 1; -1 0; 0 -1],
-            0.2 * ones(4)
+            0.1 * ones(4)
     ))
-    # push!(region_data, ContactRegion(
-    #         AffineMap(one(RotMatrix{3}) * RotXYZ(0.1, -0.2, 0.3), SVector(0.0, 1.0, 0.2)),
-    #         0.7,
-    #         0.0,
-    #         Float64[1 0; 0 1; -1 0; 0 -1],
-    #         0.2 * ones(4)
-    # ))
+    push!(region_data, ContactRegion(
+            AffineMap(one(RotMatrix{3}) * RotXYZ(-0.1, 0.2, 0.3), SVector(0.5, 0.8, 0.2)),
+            0.7,
+            0.0,
+            Float64[1 0; 0 1; -1 0; 0 -1],
+            0.1 * ones(4)
+    ))
     region_data
 end
 
@@ -110,7 +110,7 @@ function create_contact_model(
         contact_force_model = SplitContactForceModel(normal_model, tangential_model)
         set_contact_force_model!(contact_model, foot_collision_elements, group, contact_force_model)
     else
-        region_thickness = 1.0
+        region_thickness = 0.3
         for (i, region) in enumerate(region_data)
             b̄ = region.b .+ flipsign.(region_offset, region.b) # FIXME
             geometry = Contact.HRep(extrude(hrep(region.A, b̄), region_thickness))
@@ -177,11 +177,28 @@ end
 ## Robot setup
 mechanism, state0, foot_points, sole_frames, floating_joint, pelvis, visuals = create_atlas()
 
+## Parameters
+g = mechanism.gravitational_acceleration.v
+max_cop_distance = Inf
+region_offset = 0
+for (bodyid, points) in foot_points
+    body = findbody(mechanism, bodyid)
+    sole_frame = sole_frames[bodyid]
+    for point in points
+        point_sole_frame = fixed_transform(body, point.frame, sole_frame) * point
+        dist = norm(point_sole_frame.v)
+        global max_cop_distance = min(max_cop_distance, dist)
+        global region_offset = max(region_offset, dist)
+    end
+end
+max_com_to_contact_distance = 1.1
+min_inter_contact_distance = 0.2# TODO: 2 * region_offset
+
 ## Environment
 region_data = create_environment()
 
 ## Collision setup
-contact_model = create_contact_model(mechanism, foot_points, region_data, region_offset=0.20) # TODO: get region offset from foot points
+contact_model = create_contact_model(mechanism, foot_points, region_data, region_offset=region_offset)
 
 ## Initial conditions
 c0 = center_of_mass(state0).v
@@ -198,12 +215,6 @@ end
 cf = nothing
 # cf = c0# + SVector(0.8, 0.5, 0.05)
 # cf = c0 + SVector(0.05, 0.0, -0.05)
-
-## Additional settings
-g = mechanism.gravitational_acceleration.v
-max_cop_distance = 0.062 # TODO: compute from contact points.
-max_com_to_contact_distance = 1.1
-min_inter_contact_distance = 0.15 # TODO: compute from contact points
 
 ## Basic initial state feasibility checks
 for i in eachindex(contacts0)
@@ -244,8 +255,8 @@ end
 gui = GUI(mvis)
 if isempty(vis.core.scope.pool.connections)
     open(gui)
-    sleep(1.)
 end
+sleep(1.)
 
 ## Optimizer
 # optimizer_factory = baron_optimizer_factory()
@@ -260,9 +271,6 @@ problem = CentroidalTrajectoryProblem(optimizer_factory, region_data, c0, ċ0, 
     objective_type=ObjectiveTypes.FEASIBILITY);
 
 disallow_jumping!(problem)
-
-# step to region 2 with both feet
-fix.(problem.z_vars[problem.pieces(problem.pieces[end]), problem.regions(problem.regions[2])], 1.0)
 
 if optimizer_factory.constructor == SCIP.Optimizer
     problem.model.optimize_hook = function (model)
@@ -297,8 +305,11 @@ if backend(problem.model).optimizer.model isa SCIP.Optimizer
     # SCIP.print_heuristic_statistics(mscip)
 end
 
-reoptimize = false
+reoptimize = true
 if reoptimize
+    ## Final region constraint
+    fix.(problem.z_vars[problem.pieces(problem.pieces[end]), problem.regions(problem.regions[end])], 1.0)
+
     # ## Re-optimize with final CoM constraint
     # cx_desired = c0[1] + 0.5
     # # cy_desired = c0[2] + 0.5
