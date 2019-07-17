@@ -73,13 +73,13 @@ function create_environment()
             Float64[1 0; 0 1; -1 0; 0 -1],
             0.1 * ones(4)
     ))
-    push!(region_data, ContactRegion(
-            AffineMap(one(RotMatrix{3}) * RotXYZ(-0.1, 0.2, 0.3), SVector(0.5, 0.8, 0.2)),
-            0.7,
-            0.0,
-            Float64[1 0; 0 1; -1 0; 0 -1],
-            0.1 * ones(4)
-    ))
+    # push!(region_data, ContactRegion(
+    #         AffineMap(one(RotMatrix{3}) * RotXYZ(-0.1, 0.2, 0.3), SVector(0.5, 0.8, 0.2)),
+    #         0.7,
+    #         0.0,
+    #         Float64[1 0; 0 1; -1 0; 0 -1],
+    #         0.1 * ones(4)
+    # ))
     region_data
 end
 
@@ -259,8 +259,8 @@ end
 sleep(1.)
 
 ## Optimizer
-# optimizer_factory = baron_optimizer_factory()
-optimizer_factory = scip_optimizer_factory()
+optimizer_factory = baron_optimizer_factory()
+# optimizer_factory = scip_optimizer_factory()
 
 ## Problem
 problem = CentroidalTrajectoryProblem(optimizer_factory, region_data, c0, ċ0, contacts0;
@@ -276,8 +276,8 @@ if optimizer_factory.constructor == SCIP.Optimizer
     problem.model.optimize_hook = function (model)
         mscip = backend(model).optimizer.model.mscip
         SCIP.SCIPsetEmphasis(mscip, SCIP.SCIP_PARAMEMPHASIS_FEASIBILITY, true)
-        # SCIP.SCIPsetPresolving(mscip, SCIP.SCIP_PARAMSETTING_AGGRESSIVE, true)
-        # SCIP.SCIPsetHeuristics(mscip, SCIP.SCIP_PARAMSETTING_AGGRESSIVE, true)
+        SCIP.SCIPsetPresolving(mscip, SCIP.SCIP_PARAMSETTING_AGGRESSIVE, true)
+        SCIP.SCIPsetHeuristics(mscip, SCIP.SCIP_PARAMSETTING_AGGRESSIVE, true)
         MOI.optimize!(backend(model))
         return
     end
@@ -302,10 +302,10 @@ setanimation!(vis, plan_animation)
 if backend(problem.model).optimizer.model isa SCIP.Optimizer
     mscip = backend(problem.model).optimizer.model.mscip
     # SCIP.print_statistics(mscip)
-    # SCIP.print_heuristic_statistics(mscip)
+    SCIP.print_heuristic_statistics(mscip)
 end
 
-reoptimize = true
+reoptimize = false
 if reoptimize
     ## Final region constraint
     fix.(problem.z_vars[problem.pieces(problem.pieces[end]), problem.regions(problem.regions[end])], 1.0)
