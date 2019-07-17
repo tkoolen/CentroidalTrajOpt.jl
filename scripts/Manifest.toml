@@ -20,9 +20,7 @@ version = "0.1.0"
 
 [[AtlasRobot]]
 deps = ["RigidBodyDynamics", "StaticArrays"]
-git-tree-sha1 = "acb3995813f54ec162e22f507dbb987970f50d73"
-repo-rev = "tk/develop"
-repo-url = "https://github.com/tkoolen/AtlasRobot.jl.git"
+path = "/home/twan/.julia/dev/AtlasRobot"
 uuid = "436ed74b-f7b6-57fe-bd82-efdbd6c0ab0c"
 version = "0.4.0"
 
@@ -165,9 +163,9 @@ uuid = "8bb1440f-4735-579b-a4ab-409b98df4dab"
 
 [[DiffEqBase]]
 deps = ["Compat", "Distributed", "DocStringExtensions", "FunctionWrappers", "IterativeSolvers", "IteratorInterfaceExtensions", "LinearAlgebra", "MuladdMacro", "Parameters", "RecipesBase", "RecursiveArrayTools", "RecursiveFactorization", "Requires", "Roots", "SparseArrays", "StaticArrays", "Statistics", "SuiteSparse", "TableTraits", "TreeViews"]
-git-tree-sha1 = "d96946472bbfb41ba04d26e6a6e9fb0d5d9f69cf"
+git-tree-sha1 = "e581e2c10c6ad5e26829b03d38874c508792801d"
 uuid = "2b5f629d-d688-5b77-993f-72d75c75574e"
-version = "5.16.3"
+version = "5.16.4"
 
 [[DiffEqCallbacks]]
 deps = ["DataStructures", "DiffEqBase", "LinearAlgebra", "OrdinaryDiffEq", "RecipesBase", "RecursiveArrayTools", "StaticArrays", "Test"]
@@ -226,6 +224,12 @@ deps = ["LinearAlgebra", "Printf", "SparseArrays"]
 git-tree-sha1 = "85e1ce16aa9b98793df704e17e7a0ceadefe404f"
 uuid = "d4d017d3-3776-5f7e-afef-a10c40355c18"
 version = "1.5.1"
+
+[[FFMPEG]]
+deps = ["BinaryProvider", "Libdl"]
+git-tree-sha1 = "5fbb3092252b78c6082a5cce2316c60a6152fbc9"
+uuid = "c87230d0-a227-11e9-1b43-d7ebe4e7570a"
+version = "0.2.1"
 
 [[FileWatching]]
 uuid = "7b1f6079-737a-58dc-b8bc-7a2ca5c1b5ee"
@@ -624,10 +628,10 @@ uuid = "995b91a9-d308-5afd-9ec6-746e21dbc043"
 version = "0.5.8"
 
 [[Plots]]
-deps = ["Base64", "Contour", "Dates", "FixedPointNumbers", "GR", "GeometryTypes", "JSON", "LinearAlgebra", "Measures", "NaNMath", "Pkg", "PlotThemes", "PlotUtils", "Printf", "REPL", "Random", "RecipesBase", "Reexport", "Requires", "Showoff", "SparseArrays", "Statistics", "StatsBase", "UUIDs"]
-git-tree-sha1 = "a9c011a7176a9010dda4853373e8d89a83f9d69d"
+deps = ["Base64", "Contour", "Dates", "FFMPEG", "FixedPointNumbers", "GR", "GeometryTypes", "JSON", "LinearAlgebra", "Measures", "NaNMath", "Pkg", "PlotThemes", "PlotUtils", "Printf", "REPL", "Random", "RecipesBase", "Reexport", "Requires", "Showoff", "SparseArrays", "Statistics", "StatsBase", "UUIDs"]
+git-tree-sha1 = "d9dff0b080321e9f9e37320d1182fee8de18a184"
 uuid = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
-version = "0.25.3"
+version = "0.26.0"
 
 [[Polyhedra]]
 deps = ["GeometryTypes", "JuMP", "LinearAlgebra", "ParameterJuMP", "RecipesBase", "SparseArrays", "StaticArrays"]
@@ -641,17 +645,13 @@ uuid = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 
 [[QPControl]]
 deps = ["LinearAlgebra", "MathOptInterface", "Parametron", "RigidBodyDynamics", "Rotations", "StaticArrays", "StaticUnivariatePolynomials"]
-git-tree-sha1 = "dc43c4dca7290d30e00fa80b168e0f1196347b4d"
-repo-rev = "master"
-repo-url = "git@github.com:tkoolen/QPControl.jl.git"
+path = "/home/twan/.julia/dev/QPControl"
 uuid = "d1d18edd-2826-5709-814b-0b0c7d0d034b"
 version = "0.1.0"
 
 [[QPWalkingControl]]
 deps = ["AtlasRobot", "Blink", "CoordinateTransformations", "EnhancedGJK", "GeometryTypes", "Interact", "InteractBase", "LightXML", "LinearAlgebra", "MathOptInterface", "MechanismGeometries", "MeshCat", "MeshCatMechanisms", "NamedColors", "OSQP", "Observables", "Parametron", "PlanarConvexHulls", "QPControl", "RigidBodyDynamics", "RigidBodySim", "Rotations", "StaticArrays", "StaticUnivariatePolynomials", "Test", "WebIO"]
-git-tree-sha1 = "a7934fe055a32e1c565ba19aed3936c18d5d52c4"
-repo-rev = "tk/develop"
-repo-url = "git@github.com:tkoolen/QPWalkingControl.jl.git"
+path = "/home/twan/.julia/dev/QPWalkingControl"
 uuid = "0b169a85-4a4a-588b-8c74-4a8044adc824"
 version = "0.1.0"
 

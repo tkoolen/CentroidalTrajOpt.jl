@@ -88,9 +88,9 @@ function create_contact_model(
         foot_points::AbstractDict{BodyID, <:AbstractVector{<:Point3D}},
         region_data::Vector{<:ContactRegion}; region_offset) # TODO
     contact_model = ContactModel()
-    normal_model = hunt_crossley_hertz(; k=300e3)
+    normal_model = hunt_crossley_hertz(; k=500e3)
     k_tangential = 7e3
-    b_tangential = 2 * sqrt(k_tangential * mass(mechanism) / 10)
+    b_tangential = 250.#2 * sqrt(k_tangential * mass(mechanism) / 10)
     world_frame = root_frame(mechanism)
     foot_collision_elements = CollisionElement[]
     for (bodyid, points) in foot_points
@@ -232,13 +232,16 @@ cvis = CentroidalTrajectoryVisualizer(vis, region_data, norm(g), length(contacts
 
 ## Robot visualization
 mvis = MechanismVisualizer(mechanism, visuals, vis)
-gui = GUI(mvis)
 copyto!(mvis, state0)
+for sole_frame in values(sole_frames)
+    setelement!(mvis, sole_frame, 0.1)
+end
 
 ## Environment visualization
 @time setelement!(mvis, contact_model)#, MeshLambertMaterial(color=RGBA(0.9, 0.9, 0.5, 0.95)))
 
-## Open
+## GUI
+gui = GUI(mvis)
 if isempty(vis.core.scope.pool.connections)
     open(gui)
     sleep(1.)
@@ -334,6 +337,7 @@ ċ = map_subfunctions(derivative, c)
 c̈ = map_subfunctions(derivative, ċ)
 rs = result.centers_of_pressure
 fs = result.contact_forces
+f̄s = result.contact_forces_local
 # τns = result.contact_normal_torques
 ps = result.contact_positions
 ns = normals(problem)
@@ -357,7 +361,6 @@ for t in range(0, T, length=100)
     @test c̈(t) ≈ g + ftot atol=1e-5
 
     # Torque about CoM
-    n = ns[problem.regions(1)]
     # τ = sum((rs[j](t) - c(t)) × fs[j](t) + n * τns[j](t) for j in problem.contacts.val)
     τ = sum((rs[j](t) - c(t)) × fs[j](t) for j in problem.contacts.val)
 
@@ -377,10 +380,6 @@ for t in range(0, T, length=100)
         r = rs[j]
 
         f_t = f(t)
-        fn_t = f_t ⋅ n
-        # τn_t = τn(t)
-
-        @test fn_t >= -1e-7
         @test norm(p(t) - r(t)) < max_cop_distance + 1e-5
 
         if region_idx == nothing
@@ -388,7 +387,10 @@ for t in range(0, T, length=100)
             # @test τn_t ≈ zero(τn_t) atol=1e-4
         else
             region = region_data[region_idx]
+            n = ns[problem.regions(region_idx)]
+            fn_t = f_t ⋅ n
             μ = region.μ
+            @test fn_t >= -1e-7
             @test norm(f_t - n * fn_t) <= μ * fn_t + 1e-6
             # @test -μrot * fn_t <= τn_t
             # @test τn_t <= μrot * fn_s
@@ -421,17 +423,17 @@ if simulate
     damping = JointDamping{Float64}(mechanism, AtlasRobot.urdfpath())
     dynamics = Dynamics(
         mechanism,
-        SumController(similar(velocity(state)), (pcontroller, damping));
+        pcontroller,#SumController(similar(velocity(state)), (pcontroller, damping));
         contact_model=contact_model)
     # callback = CallbackSet(RealtimeRateLimiter(poll_interval=pi / 100), )
-    # callback=CallbackSet(gui; max_fps=30))
+    callback = CallbackSet(gui; max_fps=30)
     T = last(result.break_times)
-    tspan = (0., T + 1)
+    tspan = (0., T + 2)
     contact_state = SoftContactState(contact_model)
-    odeproblem = ODEProblem(dynamics, (state, contact_state), tspan)
+    odeproblem = ODEProblem(dynamics, (state, contact_state), tspan)#, callback=callback)
 
     # simulate
-    @time sol = RigidBodySim.solve(odeproblem, Tsit5(), abs_tol = 1e-8, dt = 1e-6, dtmin=1e-7, dtmax=1e-4);
+    @time sol = RigidBodySim.solve(odeproblem, Tsit5(), abs_tol = 1e-8, dt = 1e-6, dtmax=1e-3);
     sim_animation = Animation(mvis, sol)
 
     # setanimation!(vis, plan_animation);
