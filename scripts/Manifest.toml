@@ -20,7 +20,9 @@ version = "0.1.0"
 
 [[AtlasRobot]]
 deps = ["RigidBodyDynamics", "StaticArrays"]
-path = "/home/twan/.julia/dev/AtlasRobot"
+git-tree-sha1 = "942ea0a0242998e65eba43605f78d08cb2e24b50"
+repo-rev = "tk/develop"
+repo-url = "https://github.com/tkoolen/AtlasRobot.jl.git"
 uuid = "436ed74b-f7b6-57fe-bd82-efdbd6c0ab0c"
 version = "0.4.0"
 
@@ -645,7 +647,9 @@ uuid = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 
 [[QPControl]]
 deps = ["LinearAlgebra", "MathOptInterface", "Parametron", "RigidBodyDynamics", "Rotations", "StaticArrays", "StaticUnivariatePolynomials"]
-path = "/home/twan/.julia/dev/QPControl"
+git-tree-sha1 = "dc43c4dca7290d30e00fa80b168e0f1196347b4d"
+repo-rev = "master"
+repo-url = "git@github.com:tkoolen/QPControl.jl.git"
 uuid = "d1d18edd-2826-5709-814b-0b0c7d0d034b"
 version = "0.1.0"
 

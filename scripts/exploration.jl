@@ -337,7 +337,6 @@ ċ = map_subfunctions(derivative, c)
 c̈ = map_subfunctions(derivative, ċ)
 rs = result.centers_of_pressure
 fs = result.contact_forces
-f̄s = result.contact_forces_local
 # τns = result.contact_normal_torques
 ps = result.contact_positions
 ns = normals(problem)
