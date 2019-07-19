@@ -87,9 +87,9 @@ version = "0.1.0"
 
 [[CSTParser]]
 deps = ["Tokenize"]
-git-tree-sha1 = "376a39f1862000442011390f1edf5e7f4dcc7142"
+git-tree-sha1 = "0ff80f68f55fcde2ed98d7b24d7abaf20727f3f8"
 uuid = "00ebfdb7-1f24-5e51-bd34-a7502290713f"
-version = "0.6.0"
+version = "0.6.1"
 
 [[Calculus]]
 deps = ["Compat"]
@@ -165,9 +165,9 @@ uuid = "8bb1440f-4735-579b-a4ab-409b98df4dab"
 
 [[DiffEqBase]]
 deps = ["Compat", "Distributed", "DocStringExtensions", "FunctionWrappers", "IterativeSolvers", "IteratorInterfaceExtensions", "LinearAlgebra", "MuladdMacro", "Parameters", "RecipesBase", "RecursiveArrayTools", "RecursiveFactorization", "Requires", "Roots", "SparseArrays", "StaticArrays", "Statistics", "SuiteSparse", "TableTraits", "TreeViews"]
-git-tree-sha1 = "e581e2c10c6ad5e26829b03d38874c508792801d"
+git-tree-sha1 = "97d7d8503514e11e551dec42ea668e4a04951af2"
 uuid = "2b5f629d-d688-5b77-993f-72d75c75574e"
-version = "5.16.4"
+version = "5.16.5"
 
 [[DiffEqCallbacks]]
 deps = ["DataStructures", "DiffEqBase", "LinearAlgebra", "OrdinaryDiffEq", "RecipesBase", "RecursiveArrayTools", "StaticArrays", "Test"]
@@ -460,9 +460,9 @@ version = "0.4.0"
 
 [[MeshCat]]
 deps = ["AssetRegistry", "Base64", "BinDeps", "Cassette", "Colors", "CoordinateTransformations", "DocStringExtensions", "GeometryTypes", "JSExpr", "LinearAlgebra", "MsgPack", "Mux", "Parameters", "Requires", "Rotations", "Sockets", "StaticArrays", "UUIDs", "WebIO"]
-git-tree-sha1 = "681c9751f1c98316f7c4bc21e7b61f72f6be1f8f"
+git-tree-sha1 = "8558db26686e5d091613ba04edf68e8f67bd7780"
 repo-rev = "tk/develop"
-repo-url = "https://github.com/tkoolen/MeshCat.jl"
+repo-url = "git@github.com:tkoolen/MeshCat.jl.git"
 uuid = "283c5d60-a78f-5afe-a0af-af636b173e11"
 version = "0.8.0"
 
@@ -576,10 +576,10 @@ uuid = "774612a8-9878-5177-865a-ca53ae2495f9"
 version = "0.1.1"
 
 [[Parameters]]
-deps = ["Markdown", "OrderedCollections", "REPL", "Test"]
-git-tree-sha1 = "70bdbfb2bceabb15345c0b54be4544813b3444e4"
+deps = ["OrderedCollections"]
+git-tree-sha1 = "1dfd7cd50a8eb06ef693a4c2bbe945943cd000c5"
 uuid = "d96e819e-fc66-5662-9728-84c9c7592b0a"
-version = "0.10.3"
+version = "0.11.0"
 
 [[Parametron]]
 deps = ["DocStringExtensions", "FunctionWrappers", "LinearAlgebra", "MacroTools", "MathOptInterface"]

@@ -31,10 +31,12 @@ using QPControl.Trajectories: PointTrajectory
 using QPWalkingControl: PosePlan, set_pose_plan!
 
 import Polyhedra
+import Blink
 
 using MeshCat: RGBA
 
 const MOI = MathOptInterface
+const MOIU = MathOptInterface.Utilities
 
 include("optimizers.jl")
 include("util.jl")
@@ -67,19 +69,26 @@ function create_environment()
             0.15 * ones(4)
     ))
     push!(region_data, ContactRegion(
-            AffineMap(one(RotMatrix{3}) * RotXYZ(0.1, -0.2, 0.3), SVector(0.7, 0.3, 0.2)),
+            AffineMap(one(RotMatrix{3}) * RotXYZ(0.1, -0.2, 0.3), SVector(0.7, 0.3, 0.3)),
             0.7,
             0.0,
             Float64[1 0; 0 1; -1 0; 0 -1],
             0.1 * ones(4)
     ))
-    # push!(region_data, ContactRegion(
-    #         AffineMap(one(RotMatrix{3}) * RotXYZ(-0.1, 0.2, 0.3), SVector(0.5, 0.8, 0.2)),
-    #         0.7,
-    #         0.0,
-    #         Float64[1 0; 0 1; -1 0; 0 -1],
-    #         0.1 * ones(4)
-    # ))
+    push!(region_data, ContactRegion(
+            AffineMap(one(RotMatrix{3}) * RotXYZ(-0.1, 0.2, 0.3), SVector(0.5, 0.8, 0.2)),
+            0.7,
+            0.0,
+            Float64[1 0; 0 1; -1 0; 0 -1],
+            0.1 * ones(4)
+    ))
+    push!(region_data, ContactRegion(
+        AffineMap(one(RotMatrix{3}) * RotXYZ(0.2, 0.3, 0.1), SVector(0.9, 1.2, 0.0)),
+        0.7,
+        0.0,
+        Float64[1 0; 0 1; -1 0; 0 -1],
+        0.1 * ones(4)
+    ))
     region_data
 end
 
@@ -132,14 +141,12 @@ function create_controller(
         contact_body_ids::AbstractVector{BodyID},
         floating_joint::Joint,
         foot_points::AbstractDict{BodyID, <:AbstractVector{<:Point3D}},
-        sole_frames::AbstractDict{BodyID, CartesianFrame3D},
         μ::Number,
         pelvis::RigidBody,
         state0::MechanismState,
         nominal_state::MechanismState,
         com_trajectory,
-        contact_position_trajectories,
-        contact_indicator_trajectories
+        pose_plans::AbstractDict{BodyID, <:PosePlan}
     )
     # Low level controller
     optimizer = OSQP.Optimizer(verbose=false, eps_abs=1e-5, eps_rel=1e-5, max_iter=5000, adaptive_rho_interval=25)
@@ -163,9 +170,7 @@ function create_controller(
     # State machine
     contacts = Dict(BodyID(body) => contact for (body, contact) in lowlevel.contacts)
     state_machine = CoMTrackingStateMachine(mechanism, contacts)
-    for (i, bodyid) in enumerate(contact_body_ids)
-        pose0 = transform_to_root(state0, sole_frames[bodyid])
-        plan = PosePlan(pose0, contact_position_trajectories[i], contact_indicator_trajectories[i], region_data)
+    for (bodyid, plan) in pose_plans
         set_pose_plan!(state_machine, bodyid, plan)
     end
 
@@ -179,20 +184,22 @@ mechanism, state0, foot_points, sole_frames, floating_joint, pelvis, visuals = c
 
 ## Parameters
 g = mechanism.gravitational_acceleration.v
-max_cop_distance = Inf
-region_offset = 0
+inside_foot_radius = Inf
+outside_foot_radius = 0.0
 for (bodyid, points) in foot_points
     body = findbody(mechanism, bodyid)
     sole_frame = sole_frames[bodyid]
     for point in points
         point_sole_frame = fixed_transform(body, point.frame, sole_frame) * point
         dist = norm(point_sole_frame.v)
-        global max_cop_distance = min(max_cop_distance, dist)
-        global region_offset = max(region_offset, dist)
+        global inside_foot_radius = min(inside_foot_radius, dist) # TODO: not technically correct
+        global outside_foot_radius = max(outside_foot_radius, dist)
     end
 end
-max_com_to_contact_distance = 1.1
-min_inter_contact_distance = 0.2# TODO: 2 * region_offset
+max_cop_distance = inside_foot_radius
+max_com_to_contact_distance = 1.07
+min_inter_contact_distance = 0.2# TODO: 2 * outside_foot_radius
+region_offset = outside_foot_radius + 0.04
 
 ## Environment
 region_data = create_environment()
@@ -266,21 +273,17 @@ optimizer_factory = baron_optimizer_factory()
 problem = CentroidalTrajectoryProblem(optimizer_factory, region_data, c0, ċ0, contacts0;
     cf=cf, g=g,
     max_cop_distance=max_cop_distance, max_com_to_contact_distance=max_com_to_contact_distance, min_inter_contact_distance=min_inter_contact_distance,
-    num_pieces=5, c_degree=3,
+    num_pieces=9, c_degree=3,
     # objective_type=ObjectiveTypes.MIN_EXCURSION);
     objective_type=ObjectiveTypes.FEASIBILITY);
 
 disallow_jumping!(problem)
 
+## Final region constraint
+fix.(problem.z_vars[problem.pieces(problem.pieces[end]), problem.regions(problem.regions[end])], 1.0)
+
 if optimizer_factory.constructor == SCIP.Optimizer
-    problem.model.optimize_hook = function (model)
-        mscip = backend(model).optimizer.model.mscip
-        SCIP.SCIPsetEmphasis(mscip, SCIP.SCIP_PARAMEMPHASIS_FEASIBILITY, true)
-        SCIP.SCIPsetPresolving(mscip, SCIP.SCIP_PARAMSETTING_AGGRESSIVE, true)
-        SCIP.SCIPsetHeuristics(mscip, SCIP.SCIP_PARAMSETTING_AGGRESSIVE, true)
-        MOI.optimize!(backend(model))
-        return
-    end
+    problem.model.optimize_hook = scip_optimize_hook
 end
 
 relax = optimizer_factory.constructor == Gurobi.Optimizer || optimizer_factory.constructor == CPLEX.Optimizer
@@ -292,23 +295,17 @@ end
 ## Feasibility
 result = CentroidalTrajOpt.solve!(problem);
 
-
-## Result visualization
-set_com_trajectory!(cvis, result)
-set_state!(cvis, result, 0.0)
-plan_animation = Animation(cvis, result)
-setanimation!(vis, plan_animation)
-
 if backend(problem.model).optimizer.model isa SCIP.Optimizer
     mscip = backend(problem.model).optimizer.model.mscip
     # SCIP.print_statistics(mscip)
     SCIP.print_heuristic_statistics(mscip)
+    # SCIP.SCIPprintVersion(mscip, Libc.FILE(0))
 end
 
 reoptimize = false
 if reoptimize
     ## Final region constraint
-    fix.(problem.z_vars[problem.pieces(problem.pieces[end]), problem.regions(problem.regions[end])], 1.0)
+    fix.(problem.z_vars[problem.pieces(problem.pieces[end]), problem.regions(problem.regions[2])], 1.0)
 
     # ## Re-optimize with final CoM constraint
     # cx_desired = c0[1] + 0.5
@@ -323,7 +320,10 @@ if reoptimize
     # end
     result = CentroidalTrajOpt.solve!(problem)
 end
+
+## Result visualization
 set_com_trajectory!(cvis, result)
+set_state!(cvis, result, 0.0)
 plan_animation = Animation(cvis, result)
 setanimation!(vis, plan_animation)
 
@@ -417,11 +417,18 @@ end
 ## Simulation
 simulate = true
 if simulate
-    ## Controller
+    # Pose plans
+    pose_plans = Dict{BodyID, PosePlan{Float64}}()
+    for (i, bodyid) in enumerate(contact_body_ids)
+        pose0 = transform_to_root(state0, sole_frames[bodyid])
+        pose_plans[bodyid] = PosePlan(pose0, result.contact_positions[i], result.contact_indicators[i], region_data)
+    end
+
+    # Controller
     μ_control = 0.7
     nominal_state = state0 # TODO
-    controller = create_controller(mechanism, contact_body_ids, floating_joint, foot_points, sole_frames, μ_control, pelvis,
-        state0, nominal_state, result.center_of_mass, result.contact_positions, result.contact_indicators);
+    controller = create_controller(mechanism, contact_body_ids, floating_joint, foot_points, μ_control, pelvis,
+        state0, nominal_state, result.center_of_mass, pose_plans);
 
     state = MechanismState(mechanism)
     copyto!(state, state0)
@@ -445,5 +452,12 @@ if simulate
 
     # setanimation!(vis, plan_animation);
     setanimation!(vis, sim_animation);
+    setanimation!(vis, merge(plan_animation, sim_animation));
+end
+
+## Set up visualizer for creating videos
+video = false
+if video
+    open(vis, Blink.Window(Dict(:width => 1280, :height => 720, :useContentSize => true)))
     setanimation!(vis, merge(plan_animation, sim_animation));
 end
