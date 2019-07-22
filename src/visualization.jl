@@ -59,7 +59,7 @@ function set_com_trajectory!(vis::CentroidalTrajectoryVisualizer, result::Centro
     vis
 end
 
-function set_state!(vis::CentroidalTrajectoryVisualizer, result::CentroidalTrajectoryResult, t::Number)
+function set_state!(vis::CentroidalTrajectoryVisualizer, result::CentroidalTrajectoryResult, t::Number; show_cones::Bool=false)
     # CoM
     c = result.center_of_mass(t)
     setvisible!(vis.com_visualizer, true)
@@ -71,7 +71,7 @@ function set_state!(vis::CentroidalTrajectoryVisualizer, result::CentroidalTraje
         f = force(t)
         settransform!(force_vis, Point(r), Vec(f / vis.gravity_mag))
         zs = indicator(t)
-        if sum(zs) > 0.5
+        if sum(zs) > 0.5 && show_cones
             setvisible!(cone_vis, true)
             region_index = argmax(zs)
             region = vis.region_data[region_index]

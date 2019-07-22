@@ -25,7 +25,9 @@ export
 export
     CentroidalTrajectoryVisualizer,
     set_com_trajectory!,
-    set_state!
+    set_state!,
+    save_result,
+    load_result
 
 using JuMP
 using LinearAlgebra
@@ -62,5 +64,8 @@ using MeshCat: setobject!, settransform!, setprop!, setvisible!
 using MeshCat: Animation, atframe, setanimation!
 
 include("visualization.jl")
+include("serialization.jl")
+
+using .Serialization
 
 end # module

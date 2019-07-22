@@ -73,17 +73,17 @@ function create_environment()
             0.7,
             0.0,
             Float64[1 0; 0 1; -1 0; 0 -1],
-            0.1 * ones(4)
+            0.15 * ones(4)
     ))
     push!(region_data, ContactRegion(
-            AffineMap(one(RotMatrix{3}) * RotXYZ(-0.1, 0.2, 0.3), SVector(0.5, 0.8, 0.2)),
+            AffineMap(one(RotMatrix{3}) * RotXYZ(-0.1, 0.2, 0.3), SVector(0.5, 1.0, 0.2)),
             0.7,
             0.0,
             Float64[1 0; 0 1; -1 0; 0 -1],
-            0.1 * ones(4)
+            0.15 * ones(4)
     ))
     push!(region_data, ContactRegion(
-        AffineMap(one(RotMatrix{3}) * RotXYZ(0.2, 0.3, 0.1), SVector(0.9, 1.2, 0.0)),
+        AffineMap(one(RotMatrix{3}) * RotXYZ(0.0, 0.0, 0.0), SVector(1.1, 1.2, 0.1)),
         0.7,
         0.0,
         Float64[1 0; 0 1; -1 0; 0 -1],
@@ -181,6 +181,10 @@ end
 
 ## Robot setup
 mechanism, state0, foot_points, sole_frames, floating_joint, pelvis, visuals = create_atlas()
+contact_body_ids = sort(collect(keys(sole_frames)), by=x -> x.value) # establishes order once and for all
+
+## Environment
+region_data = create_environment()
 
 ## Parameters
 g = mechanism.gravitational_acceleration.v
@@ -201,17 +205,24 @@ max_com_to_contact_distance = 1.07
 min_inter_contact_distance = 0.2# TODO: 2 * outside_foot_radius
 region_offset = outside_foot_radius + 0.04
 
-## Environment
-region_data = create_environment()
-
 ## Collision setup
 contact_model = create_contact_model(mechanism, foot_points, region_data, region_offset=region_offset)
+
+## Load results
+load = true
+if load
+    if @isdefined result
+        @error "result already defined."
+    else
+        import StaticArrays, StaticUnivariatePolynomials, QPControl.Trajectories # for field types of CentroidalTrajectoryResult
+        result = load_result();
+    end
+end
 
 ## Initial conditions
 c0 = center_of_mass(state0).v
 ċ0 = center_of_mass_velocity(state0).v
 
-contact_body_ids = sort(collect(keys(sole_frames)), by=x -> x.value) # establishes order once and for all
 contacts0 = map(contact_body_ids) do bodyid # TODO
     sole_frame = sole_frames[bodyid]
     p0 = translation(transform_to_root(state0, sole_frame))
@@ -246,7 +257,7 @@ end
 delete!(vis)
 
 ## Centroidal trajectory visualization
-cvis = CentroidalTrajectoryVisualizer(vis, region_data, norm(g), length(contacts0))
+cvis = CentroidalTrajectoryVisualizer(vis, region_data, norm(g), length(contact_body_ids))
 
 ## Robot visualization
 mvis = MechanismVisualizer(mechanism, visuals, vis)
@@ -461,3 +472,6 @@ if video
     open(vis, Blink.Window(Dict(:width => 1280, :height => 720, :useContentSize => true)))
     setanimation!(vis, merge(plan_animation, sim_animation));
 end
+
+## Save results
+CentroidalTrajOpt.Serialization.save_result(result)

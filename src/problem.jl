@@ -86,7 +86,7 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
     # l: coefficient index
     # m: region index
 
-    # Δts = AxisArray(fill(0.7, length(pieces)), pieces)
+    # Δts = AxisArray(fill(0.6, length(pieces)), pieces)
     Δts = nothing
     if Δts === nothing
         Δts = axis_array_vars(model, i -> "Δt[$i]", pieces)
