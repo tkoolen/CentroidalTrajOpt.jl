@@ -215,7 +215,7 @@ if load
         @error "result already defined."
     else
         import StaticArrays, StaticUnivariatePolynomials, QPControl.Trajectories # for field types of CentroidalTrajectoryResult
-        result = load_result();
+        result = load_result(joinpath(ENV["CENTROIDAL_TRAJ_OPT_RESULT_DIR"], "results", "four_regions_kinematically_infeasible.jld2"));
     end
 end
 
@@ -474,7 +474,7 @@ if video
 end
 
 ## Save results
-save = false
+save = true
 if save
     CentroidalTrajOpt.Serialization.save_result(result)
 end

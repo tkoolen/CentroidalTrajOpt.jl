@@ -4,28 +4,25 @@ module Serialization
 export save_result, load_result
 
 import ..CentroidalTrajOpt: CentroidalTrajectoryResult
-import Gtk
 import JLD2
 import FileIO
 
 function save_result(result::CentroidalTrajectoryResult, filename::Union{AbstractString, Nothing}=nothing)
     if filename === nothing
-        filename = Gtk.save_dialog_native("Save as...", Gtk.Null(), (Gtk.GtkFileFilter("*.jld2", name="All supported formats"), "*.jld2"))
+        default_dir = get(pwd, ENV, "CENTROIDAL_TRAJ_OPT_RESULT_DIR")
+        println("Directory [$default_dir]?")
+        dir = readline()
+        isempty(dir) && (dir = default_dir)
+        println("File name?")
+        basename = readline()
+        filename = joinpath(dir, basename)
     end
-    if !isempty(filename)
-        FileIO.save(filename, Dict("result" => result))
-    end
+    FileIO.save(filename, Dict("result" => result))
     return filename
 end
 
-function load_result(filename::Union{AbstractString, Nothing}=nothing)
-    if filename === nothing
-        filename = Gtk.open_dialog_native("Open result file", Gtk.GtkNullContainer(), ("*.jld2", Gtk.GtkFileFilter("*.jld2", name="All supported formats")))
-    end
-    if !isempty(filename)
-        return FileIO.load(filename)["result"]
-    end
-    return nothing
+function load_result(filename::AbstractString)
+    return FileIO.load(filename)["result"]
 end
 
 end
