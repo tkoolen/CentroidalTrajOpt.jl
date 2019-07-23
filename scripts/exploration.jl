@@ -209,7 +209,7 @@ region_offset = outside_foot_radius + 0.04
 contact_model = create_contact_model(mechanism, foot_points, region_data, region_offset=region_offset)
 
 ## Load results
-load = true
+load = false
 if load
     if @isdefined result
         @error "result already defined."
@@ -277,8 +277,8 @@ end
 sleep(1.)
 
 ## Optimizer
-optimizer_factory = baron_optimizer_factory()
-# optimizer_factory = scip_optimizer_factory()
+# optimizer_factory = baron_optimizer_factory()
+optimizer_factory = scip_optimizer_factory()
 
 ## Problem
 problem = CentroidalTrajectoryProblem(optimizer_factory, region_data, c0, ċ0, contacts0;
@@ -474,4 +474,7 @@ if video
 end
 
 ## Save results
-CentroidalTrajOpt.Serialization.save_result(result)
+save = false
+if save
+    CentroidalTrajOpt.Serialization.save_result(result)
+end

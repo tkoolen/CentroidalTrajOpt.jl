@@ -43,6 +43,7 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
         contacts0::AbstractVector{<:Union{Pair{<:ContactRegion, <:AbstractVector}, Nothing}};
         cf = nothing,
         c_degree = 3,
+        r_degree = c_degree,
         num_pieces = 2,
         g = SVector(0.0, 0.0, -9.81),
         max_cop_distance = 0.1,
@@ -53,7 +54,7 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
 
     c_num_coeffs = c_degree + 1
     f_num_coeffs = c_num_coeffs - 2
-    r_num_coeffs = c_num_coeffs
+    r_num_coeffs = r_degree + 1
     num_regions = length(region_data)
     num_contacts = length(contacts0)
 
