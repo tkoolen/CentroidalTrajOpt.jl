@@ -48,6 +48,8 @@ const SUP = StaticUnivariatePolynomials
 import Polyhedra
 using Polyhedra: hrep, vrep, polyhedron, Mesh
 
+import SCIP
+
 include("util.jl")
 include("region.jl")
 include("problem.jl")

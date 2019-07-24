@@ -84,6 +84,8 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
     optimizer_does_soc = MOI.supports_constraint(optimizer, MOI.VectorOfVariables, MOI.SecondOrderCone)
     optimizer_does_soc || @info "Optimizer does not support second order cone constraints; using quadratic constraints instead."
 
+    optimizer_does_indicator_constraints = optimizer.optimizer.model isa SCIP.Optimizer # TODO: generalize
+
     # Indexing convention:
     # i: piece index
     # j: contact index
@@ -273,9 +275,16 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
                 # Contact position constraints
                 @constraint model A * p̄ .<= b
                 p_aux = @variable model [1 : 3]
-                @constraint model p_aux .== transform([p̄; 0])
-                @constraint model  (p - p_aux) .<= Mr * (1 - z)
-                @constraint model -(p - p_aux) .<= Mr * (1 - z)
+                @constraint model p_aux .== p - transform([p̄; 0])
+                if optimizer_does_indicator_constraints
+                    for i in eachindex(p_aux)
+                        MOI.add_constraint(optimizer, MOI.VectorOfVariables([z; p_aux]), SCIP.IndicatorSet(setindex!(zeros(3), +1, i), 0.0))
+                        MOI.add_constraint(optimizer, MOI.VectorOfVariables([z; p_aux]), SCIP.IndicatorSet(setindex!(zeros(3), -1, i), 0.0))
+                    end
+                else
+                    @constraint model  p_aux .<= Mr * (1 - z)
+                    @constraint model -p_aux .<= Mr * (1 - z)
+                end
 
                 # CoP constraints
                 r̄_min, r̄_max = r̄_extrema[region]
@@ -289,9 +298,16 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
                     set_upper_bound.(r̄, r̄_max)
                     # @constraint model A * r̄ .<= b
                     r_aux = @variable model [1 : 3]
-                    @constraint model r_aux .== transform([r̄; 0])
-                    @constraint model  (r - r_aux) .<= Mr * (1 - z)
-                    @constraint model -(r - r_aux) .<= Mr * (1 - z)
+                    @constraint model r_aux .== r - transform([r̄; 0])
+                    if optimizer_does_indicator_constraints
+                        for i in eachindex(r_aux)
+                            MOI.add_constraint(optimizer, MOI.VectorOfVariables([z; r_aux]), SCIP.IndicatorSet(setindex!(zeros(3), +1, i), 0.0))
+                            MOI.add_constraint(optimizer, MOI.VectorOfVariables([z; r_aux]), SCIP.IndicatorSet(setindex!(zeros(3), -1, i), 0.0))
+                        end
+                    else
+                        @constraint model  r_aux .<= Mr * (1 - z)
+                        @constraint model -r_aux .<= Mr * (1 - z)
+                    end
                     if max_cop_distance == 0
                         @constraint model r .== p
                     else
@@ -323,7 +339,14 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
                     # auxiliary variable needed for SecondOrderCone constraint:
                     μf̄z = @variable model lower_bound=0 upper_bound=μ * upper_bound(f̄z)
                     @constraint model μf̄z == μ * f̄z
-                    @constraint model μf̄z <= Mf * μ * z
+                    if optimizer_does_indicator_constraints
+                        z_opposite = @variable model
+                        set_binary(z_opposite)
+                        @constraint model z_opposite == 1 - z
+                        MOI.add_constraint(optimizer, MOI.VectorOfVariables([z_opposite; f̄z]), SCIP.IndicatorSet([1.0], 0.0))
+                    else
+                        @constraint model μf̄z <= Mf * μ * z
+                    end
                     if optimizer_does_soc
                         @constraint model [μf̄z; f̄xy] in SecondOrderCone()
                     else
