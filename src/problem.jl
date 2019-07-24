@@ -119,6 +119,7 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
 
     # Contact location extrema (local coordinates)
     p̄_extrema = AxisArray(map(region -> polyhedron_extrema(polyhedron(hrep(region.A, region.b))), region_data), regions)
+    r̄_extrema = map(((p̄_min, p̄_max),) -> (p̄_min .- max_cop_distance, p̄_max .+ max_cop_distance), p̄_extrema)
     # p̄_extrema = AxisArray(map(region -> ((-1, -1), (1, 1)), region_data), regions)
 
     # Continuous variables
@@ -252,10 +253,10 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
             p = p_vars[piece, contact]
             for m in 1 : num_regions
                 region = regions(m)
-                region_min, region_max = p̄_extrema[region]
                 p̄ = p̄_vars[piece, contact, region]
-                set_lower_bound.(p̄, region_min)
-                set_upper_bound.(p̄, region_max)
+                p̄_min, p̄_max = p̄_extrema[region]
+                set_lower_bound.(p̄, p̄_min)
+                set_upper_bound.(p̄, p̄_max)
                 A = region_data[m].A
                 b = region_data[m].b
                 transform = region_data[m].transform
@@ -269,12 +270,13 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
                 @constraint model -(p - p_aux) .<= Mr * (1 - z)
 
                 # CoP constraints
+                r̄_min, r̄_max = r̄_extrema[region]
                 for l = 1 : r_num_coeffs
                     coeff = r_coeffs(l)
                     r = r_vars[piece, contact, coeff]
                     r̄ = r̄_vars[piece, contact, coeff, region]
-                    set_lower_bound.(r̄, region_min .- max_cop_distance)
-                    set_upper_bound.(r̄, region_max .+ max_cop_distance)
+                    set_lower_bound.(r̄, r̄_min)
+                    set_upper_bound.(r̄, r̄_max)
                     # @constraint model A * r̄ .<= b
                     r_aux = @variable model [1 : 3]
                     @constraint model r_aux .== transform([r̄; 0])
@@ -283,9 +285,9 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
                     if max_cop_distance == 0
                         @constraint model r .== p
                     else
-                        @constraint model sum(x -> x^2, r - p) <= max_cop_distance^2
-                        # @constraint model  (r - p) .<= max_cop_distance
-                        # @constraint model -(r - p) .<= max_cop_distance
+                        # @constraint model sum(x -> x^2, r - p) <= max_cop_distance^2
+                        @constraint model  (r - p) .<= max_cop_distance
+                        @constraint model -(r - p) .<= max_cop_distance
                     end
                 end
             end

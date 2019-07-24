@@ -86,7 +86,7 @@ function extrude(polyhedron::Polyhedra.HRepresentation, thickness::Number; zmax=
 end
 
 function polyhedron_extrema(polyhedron::Polyhedra.Polyhedron)
-    Polyhedra.hasrays(polyhedron) && error("Polyhedron is not compact")
+    Polyhedra.hasallrays(polyhedron) && error("Polyhedron is not compact")
     extrema(Polyhedra.points(polyhedron))
 end
 
