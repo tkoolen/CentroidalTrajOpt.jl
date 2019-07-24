@@ -285,9 +285,9 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
                     if max_cop_distance == 0
                         @constraint model r .== p
                     else
-                        # @constraint model sum(x -> x^2, r - p) <= max_cop_distance^2
-                        @constraint model  (r - p) .<= max_cop_distance
-                        @constraint model -(r - p) .<= max_cop_distance
+                        @constraint model sum(x -> x^2, r - p) <= max_cop_distance^2
+                        # @constraint model  (r - p) .<= √2 / 2 * max_cop_distance
+                        # @constraint model -(r - p) .<= √2 / 2 * max_cop_distance
                     end
                 end
             end
