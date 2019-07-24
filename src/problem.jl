@@ -17,7 +17,6 @@ struct CentroidalTrajectoryProblem
     p_vars
     r_vars
     r̄_vars
-    # τn_vars
     Δts
     z_vars
 
@@ -143,8 +142,6 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
     p̄_vars = axis_array_vars(model, (i, j, k, m) -> "P̄[p$i, c$j, $k, r$m]", pieces, contacts, coords2d, regions)
     r_vars = axis_array_vars(model, (i, j, k, l) -> "R[p$i, c$j, $k, $l]", pieces, contacts, coords, r_coeffs)
     r̄_vars = axis_array_vars(model, (i, j, k, l, m) -> "R̄[p$i, c$j, $k, $l, r$m]", pieces, contacts, coords2d, r_coeffs, regions)
-    # τn_vars = axis_array_vars(model, (i, j, l) -> "Tn[p$i, c$j, $l]", pieces, contacts, f_coeffs;
-    #     lower_bound=-1 * norm(g), upper_bound=1 * norm(g))
 
     #@variable model objval
     if objective_type == ObjectiveTypes.MIN_EXCURSION
@@ -198,8 +195,7 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
                     # unset_binary(z_var) # to make Alpine happpy
                     fix.(p, p0, force=true)
                 end
-            end
-            if i > 1
+            else
                 # Each contact must be unassigned for one piece before it can be reassigned to a region.
                 # Let Δzᵢ,ⱼ,ₘ = zᵢ,ⱼ,ₘ - zᵢ₋₁,ⱼ,ₘ. Then there are three cases for ∑ₘ |Δzᵢ,ⱼ,ₘ|:
                 # 1) ∑ₘ |Δzᵢ,ⱼ,ₘ| = 0: the assignment during piece i is the same as the assignment during piece i - 1
@@ -247,17 +243,11 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
         # CoPs (global)
         rs = [[BezierCurve(r_vars[piece, contacts(j), coords(k)]...) for k in coords.val] for j in contacts.val]
 
-        # Normal torques (global)
-        # τns = [BezierCurve(τn_vars[piece, contacts(j)]...) for j in contacts.val]
-
         # Dynamics
         ftot = sum(fs)
         constrain_poly_equal.(model, c′′, identity((g + ftot) .* Δtsqs[i]))
 
         # Torque balance
-        # τ = sum(Polynomial.(rs[j]) × Polynomial.(fs[j]) for j = 1 : num_contacts) +
-        #     sum(Polynomial.(sum(ns[regions(m)] .* z_vars[piece, regions(m), contacts(j)] for m in 1 : num_regions) .* τns[j]) for j = 1 : num_contacts) -
-        #     Polynomial.(c) × Polynomial.(ftot)
         τ = sum(Polynomial.(rs[j]) × Polynomial.(fs[j]) for j = 1 : num_contacts) -
             Polynomial.(c) × Polynomial.(ftot)
         τ = map(x -> Polynomial(simplify.(model, x.coeffs)), τ)
@@ -340,15 +330,6 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
                         friction_cone_quadratic_constraint = @constraint model f̄xy ⋅ f̄xy <= μf̄z^2
                         push!(friction_cone_quadratic_constraints, friction_cone_quadratic_constraint)
                     end
-                    # TODO: use a SOS condition?
-                    # TODO: crude model
-                    # τn = τn_vars[piece, contact, coeff]
-                    # if μrot == 0
-                    #     fix(τn, 0, force=true)
-                    # else
-                    #     @constraint model  τn <= μrot * f̄z + Mτ * z
-                    #     @constraint model -τn <= μrot * f̄z + Mτ * z
-                    # end
                 end
             end
             for l in 1 : f_num_coeffs
@@ -389,7 +370,7 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
 
     CentroidalTrajectoryProblem(model,
         c_coeffs, f_coeffs, contacts, regions, pieces, coords, coords2d,
-        c_vars, f_vars, f̄_vars, p_vars, r_vars, r̄_vars, #=τn_vars,=# Δts, z_vars,
+        c_vars, f_vars, f̄_vars, p_vars, r_vars, r̄_vars, Δts, z_vars,
         ns, friction_cone_quadratic_constraints
     )
 end
