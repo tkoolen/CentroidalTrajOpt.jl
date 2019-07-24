@@ -52,7 +52,8 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
         min_Δt = 0.6,
         max_Δt = 1.5,
         c_margin_xy = 0.5,
-        c_margin_z = 1.2
+        c_margin_z = 1.2,
+        max_force = 3 * norm(g)
     )
 
     c_num_coeffs = c_degree + 1
@@ -135,9 +136,9 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
     c_vars = axis_array_vars(model, (i, k, l) -> "C[p$i, $k, $l]",pieces, coords, c_coeffs;
         lower_bound=-2, upper_bound=2)
     f_vars = axis_array_vars(model, (i, j, k, l) -> "F[p$i, c$j, $k, $l]", pieces, contacts, coords, f_coeffs;
-        lower_bound=-3 * norm(g), upper_bound=3 * norm(g))
+        lower_bound=-max_force, upper_bound=max_force)
     f̄_vars = axis_array_vars(model, (i, j, k, l, m) -> "F̄[p$i, c$j, $k, $l, r$m]", pieces, contacts, coords, f_coeffs, regions;
-        lower_bound=-3 * norm(g), upper_bound=3 * norm(g))
+        lower_bound=-max_force, upper_bound=max_force)
     p_vars = axis_array_vars(model, (i, j, k) -> "P[p$i, c$j, $k]", pieces, contacts, coords)
     p̄_vars = axis_array_vars(model, (i, j, k, m) -> "P̄[p$i, c$j, $k, r$m]", pieces, contacts, coords2d, regions)
     r_vars = axis_array_vars(model, (i, j, k, l) -> "R[p$i, c$j, $k, $l]", pieces, contacts, coords, r_coeffs)
@@ -303,8 +304,7 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
         end
 
         # Contact force/torque constraints
-        Mf = 3 * norm(g) # TODO
-        Mτ = norm(g)
+        Mf = max_force
         for j in 1 : num_contacts
             contact = contacts(j)
             for m in 1 : num_regions
