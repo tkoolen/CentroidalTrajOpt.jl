@@ -49,7 +49,11 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
         max_cop_distance = 0.1,
         max_com_to_contact_distance,
         min_inter_contact_distance,
-        objective_type::ObjectiveType = FEASIBILITY
+        objective_type::ObjectiveType = FEASIBILITY,
+        min_Δt = 0.6,
+        max_Δt = 1.5,
+        c_margin_xy = 0.5,
+        c_margin_z = 1.2
     )
 
     c_num_coeffs = c_degree + 1
@@ -87,25 +91,22 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
     # l: coefficient index
     # m: region index
 
-    # Δts = AxisArray(fill(0.6, length(pieces)), pieces)
-    Δts = nothing
-    if Δts === nothing
+    if min_Δt == max_Δt
+        Δts = AxisArray(fill(min_Δt, length(pieces)), pieces)
+        Δtsqs = map(x -> x^2, Δts)
+    else
         Δts = axis_array_vars(model, i -> "Δt[$i]", pieces)
         Δtsqs = axis_array_vars(model, i -> "Δtsq[$i]", pieces)
         for (Δt, Δtsq) in zip(Δts, Δtsqs)
-            Δtmin = 0.6
-            Δtmax = 1.5 # TODO
-            set_lower_bound(Δt, Δtmin)
-            set_upper_bound(Δt, Δtmax)
-            set_lower_bound(Δtsq, Δtmin^2)
-            set_upper_bound(Δtsq, Δtmax^2)
+            set_lower_bound(Δt, min_Δt)
+            set_upper_bound(Δt, max_Δt)
+            set_lower_bound(Δtsq, min_Δt^2)
+            set_upper_bound(Δtsq, max_Δt^2)
             @constraint model Δtsq == Δt^2
         end
         if objective_type == ObjectiveTypes.MIN_TIME
             @objective model Min sum(Δts)
         end
-    else
-        Δtsqs = map(x -> x^2, Δts)
     end
 
     # Contact indicators. z[pieces(i), contacts(j), regions(m)] == 1 implies that
@@ -129,6 +130,7 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
     end
     p_min, p_max = polyhedron_extrema(polyhedron(vrep(p_vertices)))
     r_min, r_max = p_min .- max_cop_distance, p_max .+ max_cop_distance
+    c_min, c_max = r_min - SVector(c_margin_xy, c_margin_xy, 0.0), r_max + SVector(c_margin_xy, c_margin_xy, c_margin_z)
 
     # Continuous variables
     c_vars = axis_array_vars(model, (i, k, l) -> "C[p$i, $k, $l]",pieces, coords, c_coeffs;
@@ -162,6 +164,13 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
         c = [BezierCurve(c_vars[piece, coords(k)]...) for k in 1 : length(coords)]
         c′ = derivative.(c)
         c′′ = derivative.(c′)
+
+        # CoM bounds
+        for l in 1 : c_num_coeffs
+            cpoint = map(x -> x.coeffs[l], c)
+            set_lower_bound.(cpoint, c_min)
+            set_upper_bound.(cpoint, c_max)
+        end
 
         # Contact/region assignment constraints
         for j in 1 : num_contacts
@@ -214,7 +223,6 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
         # Initial conditions
         if i == 1
             fix.(map(x -> x.coeffs[1], c), c0, force=true)
-            # @constraint model map(x -> x(0), c) .== c0
             @constraint model map(x -> x(0), c′) .== ċ0 .* Δts[i]
         end
 
@@ -222,7 +230,6 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
         if i == num_pieces
             if cf !== nothing
                 fix.(map(x -> x.coeffs[end], c), cf, force=true)
-                # @constraint model map(x -> x(1), c) .== cf
             end
             @constraint model map(x -> x(1), c′) .== 0
             @constraint model map(x -> x(1), c′′) .== 0
