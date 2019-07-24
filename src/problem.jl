@@ -84,7 +84,7 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
     optimizer_does_soc = MOI.supports_constraint(optimizer, MOI.VectorOfVariables, MOI.SecondOrderCone)
     optimizer_does_soc || @info "Optimizer does not support second order cone constraints; using quadratic constraints instead."
 
-    optimizer_does_indicator_constraints = optimizer.optimizer.model isa SCIP.Optimizer # TODO: generalize
+    optimizer_does_indicator_constraints = false#optimizer.optimizer.model isa SCIP.Optimizer # TODO: generalize
 
     # Indexing convention:
     # i: piece index
