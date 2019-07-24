@@ -53,7 +53,8 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
         max_Δt = 1.5,
         c_margin_xy = 0.5,
         c_margin_z = 1.2,
-        max_force = 3 * norm(g)
+        max_force = 3 * norm(g),
+        Δpmax = 2.0#0.8 # TODO
     )
 
     c_num_coeffs = c_degree + 1
@@ -212,10 +213,12 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
                 # Contact position p may only change when the contact is not assigned to a region,
                 # i.e., when ∑ₘ zᵢ,ⱼ,ₘ = 0.
                 Δp = p - p_vars[pieces(i - 1), contact]
-                Δpmax = 0.8 # TODO
                 # @constraint model sum(x -> x^2, Δp) <= (1 - sum(z_vars[piece, contact])) * Δpmax^2
-                @constraint model  Δp .<= (1 - sum(z_vars[piece, contact])) * Δpmax
-                @constraint model -Δp .<= (1 - sum(z_vars[piece, contact])) * Δpmax
+                z_no_contact = @variable model
+                set_binary(z_no_contact)
+                @constraint model z_no_contact == 1 - sum(z_vars[piece, contact])
+                @constraint model  Δp .<= z_no_contact * Δpmax
+                @constraint model -Δp .<= z_no_contact * Δpmax
             end
         end
 
@@ -257,7 +260,9 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
         constrain_poly_equal.(model, τ, 0)
 
         # CoP and contact position constraints
-        Mr = 2.0 # TODO
+        # TODO: could derive tighter big-M from constraints on p and p̄, but it's unclear whether that will actually help performance,
+        # because changing Mr to
+        Mr = 2.0
         for j in 1 : num_contacts
             contact = contacts(j)
             p = p_vars[piece, contact]
@@ -312,15 +317,13 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
                         @constraint model r .== p
                     else
                         @constraint model sum(x -> x^2, r - p) <= max_cop_distance^2
-                        # @constraint model  (r - p) .<= √2 / 2 * max_cop_distance
-                        # @constraint model -(r - p) .<= √2 / 2 * max_cop_distance
+                        # constrain_l1_norm(model, r - p, √2 / 2 * max_cop_distance; add_bounds=true)
                     end
                 end
             end
         end
 
         # Contact force/torque constraints
-        Mf = max_force
         for j in 1 : num_contacts
             contact = contacts(j)
             for m in 1 : num_regions
@@ -345,7 +348,8 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
                         @constraint model z_opposite == 1 - z
                         MOI.add_constraint(optimizer, MOI.VectorOfVariables([z_opposite; f̄z]), SCIP.IndicatorSet([1.0], 0.0))
                     else
-                        @constraint model μf̄z <= Mf * μ * z
+                        # @constraint model μf̄z <= max_force * μ * z
+                        @constraint model f̄z <= max_force * z
                     end
                     if optimizer_does_soc
                         @constraint model [μf̄z; f̄xy] in SecondOrderCone()
