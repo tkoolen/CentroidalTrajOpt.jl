@@ -53,7 +53,7 @@ include("region.jl")
 include("problem.jl")
 include("result.jl")
 
-using GeometryTypes: HyperSphere, Point, Vec, GLNormalMesh
+using GeometryTypes: Point, Vec, HyperSphere, HyperRectangle, GLNormalMesh
 
 import MeshCat
 using MeshCat: Visualizer

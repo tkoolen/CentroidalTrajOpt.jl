@@ -120,7 +120,15 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
     # Contact location extrema (local coordinates)
     p̄_extrema = AxisArray(map(region -> polyhedron_extrema(polyhedron(hrep(region.A, region.b))), region_data), regions)
     r̄_extrema = map(((p̄_min, p̄_max),) -> (p̄_min .- max_cop_distance, p̄_max .+ max_cop_distance), p̄_extrema)
-    # p̄_extrema = AxisArray(map(region -> ((-1, -1), (1, 1)), region_data), regions)
+    p_extrema = nothing
+    p_vertices = mapreduce(vcat, 1 : num_regions) do m
+        let region = region_data[m]
+            map(Polyhedra.points(polyhedron(hrep(region.A, region.b)))) do p̄_vertex
+                region.transform([p̄_vertex; 0])
+            end
+        end
+    end
+    p_extrema = polyhedron_extrema(polyhedron(vrep(p_vertices)))
 
     # Continuous variables
     c_vars = axis_array_vars(model, (i, k, l) -> "C[p$i, $k, $l]",pieces, coords, c_coeffs;
@@ -129,8 +137,7 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
         lower_bound=-3 * norm(g), upper_bound=3 * norm(g))
     f̄_vars = axis_array_vars(model, (i, j, k, l, m) -> "F̄[p$i, c$j, $k, $l, r$m]", pieces, contacts, coords, f_coeffs, regions;
         lower_bound=-3 * norm(g), upper_bound=3 * norm(g))
-    p_vars = axis_array_vars(model, (i, j, k) -> "P[p$i, c$j, $k]", pieces, contacts, coords;
-        lower_bound=-2, upper_bound=2)
+    p_vars = axis_array_vars(model, (i, j, k) -> "P[p$i, c$j, $k]", pieces, contacts, coords)
     p̄_vars = axis_array_vars(model, (i, j, k, m) -> "P̄[p$i, c$j, $k, r$m]", pieces, contacts, coords2d, regions)
     r_vars = axis_array_vars(model, (i, j, k, l) -> "R[p$i, c$j, $k, $l]", pieces, contacts, coords, r_coeffs;
         lower_bound=-2, upper_bound=2)
@@ -167,6 +174,11 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
             else
                 @constraint model sum(z_vars[piece, contact]) <= 1
             end
+
+            p = p_vars[piece, contact]
+            p_min, p_max = p_extrema
+            set_lower_bound.(p, p_min)
+            set_upper_bound.(p, p_max)
             if i == 1
                 # Initial contact assignment.
                 if contacts0[j] === nothing
@@ -177,7 +189,7 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
                     z_var = z_vars[piece, contact, regions(m)]
                     fix(z_var, 1, force=true)
                     # unset_binary(z_var) # to make Alpine happpy
-                    fix.(p_vars[piece, contact], p0, force=true)
+                    fix.(p, p0, force=true)
                 end
             end
             if i > 1
@@ -193,7 +205,7 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
 
                 # Contact position p may only change when the contact is not assigned to a region,
                 # i.e., when ∑ₘ zᵢ,ⱼ,ₘ = 0.
-                Δp = p_vars[piece, contact] - p_vars[pieces(i - 1), contact]
+                Δp = p - p_vars[pieces(i - 1), contact]
                 Δpmax = 0.8 # TODO
                 # @constraint model sum(x -> x^2, Δp) <= (1 - sum(z_vars[piece, contact])) * Δpmax^2
                 @constraint model  Δp .<= (1 - sum(z_vars[piece, contact])) * Δpmax

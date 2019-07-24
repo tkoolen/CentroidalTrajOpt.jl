@@ -87,7 +87,10 @@ end
 
 function polyhedron_extrema(polyhedron::Polyhedra.Polyhedron)
     Polyhedra.hasallrays(polyhedron) && error("Polyhedron is not compact")
-    extrema(Polyhedra.points(polyhedron))
+    N = Polyhedra.fulldim(polyhedron)
+    T = Polyhedra.coefficient_type(polyhedron)
+    bounding_box = HyperRectangle{N, T}(collect(Point{N, T}, Polyhedra.points(polyhedron)))
+    minimum(bounding_box), maximum(bounding_box)
 end
 
 # scrap
