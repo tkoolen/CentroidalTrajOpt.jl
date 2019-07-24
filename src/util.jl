@@ -85,6 +85,11 @@ function extrude(polyhedron::Polyhedra.HRepresentation, thickness::Number; zmax=
     hrep(Ā, b̄, polyhedron.linset)
 end
 
+function polyhedron_extrema(polyhedron::Polyhedra.Polyhedron)
+    Polyhedra.hasrays(polyhedron) && error("Polyhedron is not compact")
+    extrema(Polyhedra.points(polyhedron))
+end
+
 # scrap
 # function poly(model::JuMP.Model, namefunc, degree::Union{Integer, Val})
 #     Polynomial(ntuple(j -> @variable(model, base_name=namefunc(j)), degree + 1))

@@ -72,3 +72,17 @@ function QPWalkingControl.PosePlan(pose0::Transform3D,
     end
     return plan
 end
+
+function check_kinematic_constraints_satisfied(contacts, c0, max_com_to_contact_distance, min_inter_contact_distance)
+    ## Basic initial state feasibility checks
+    for i in eachindex(contacts)
+        p_i_0 = last(contacts[i])
+        norm(c0 - p_i_0) <= max_com_to_contact_distance || error()
+        for j in eachindex(contacts)
+            p_j_0 = last(contacts[j])
+            if i != j
+                norm(p_i_0 - p_j_0) >= min_inter_contact_distance || error()
+            end
+        end
+    end
+end

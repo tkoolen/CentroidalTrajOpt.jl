@@ -234,18 +234,7 @@ cf = nothing
 # cf = c0# + SVector(0.8, 0.5, 0.05)
 # cf = c0 + SVector(0.05, 0.0, -0.05)
 
-## Basic initial state feasibility checks
-for i in eachindex(contacts0)
-    p_i_0 = last(contacts0[i])
-    @assert norm(c0 - p_i_0) <= max_com_to_contact_distance # TODO: integrate with kinematic limits
-
-    for j in eachindex(contacts0)
-        p_j_0 = last(contacts0[j])
-        if i != j
-            @assert norm(p_i_0 - p_j_0) >= min_inter_contact_distance # TODO: integrate with kinematic limits
-        end
-    end
-end
+check_kinematic_constraints_satisfied(contacts0, c0, max_com_to_contact_distance, min_inter_contact_distance)
 
 ## Create visualizer
 using MeshCat
@@ -474,7 +463,7 @@ if video
 end
 
 ## Save results
-save = true
+save = false
 if save
     CentroidalTrajOpt.Serialization.save_result(result)
 end

@@ -117,6 +117,10 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
     Rs = AxisArray(map(data -> data.transform.linear, region_data), regions)
     ns = map(R -> R[:, 3], Rs)
 
+    # Contact location extrema (local coordinates)
+    p̄_extrema = AxisArray(map(region -> polyhedron_extrema(polyhedron(hrep(region.A, region.b))), region_data), regions)
+    # p̄_extrema = AxisArray(map(region -> ((-1, -1), (1, 1)), region_data), regions)
+
     # Continuous variables
     c_vars = axis_array_vars(model, (i, k, l) -> "C[p$i, $k, $l]",pieces, coords, c_coeffs;
         lower_bound=-2, upper_bound=2)
@@ -126,12 +130,10 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
         lower_bound=-3 * norm(g), upper_bound=3 * norm(g))
     p_vars = axis_array_vars(model, (i, j, k) -> "P[p$i, c$j, $k]", pieces, contacts, coords;
         lower_bound=-2, upper_bound=2)
-    p̄_vars = axis_array_vars(model, (i, j, k, m) -> "P̄[p$i, c$j, $k, r$m]", pieces, contacts, coords2d, regions;
-        lower_bound=-1, upper_bound=1)
+    p̄_vars = axis_array_vars(model, (i, j, k, m) -> "P̄[p$i, c$j, $k, r$m]", pieces, contacts, coords2d, regions)
     r_vars = axis_array_vars(model, (i, j, k, l) -> "R[p$i, c$j, $k, $l]", pieces, contacts, coords, r_coeffs;
         lower_bound=-2, upper_bound=2)
-    r̄_vars = axis_array_vars(model, (i, j, k, l, m) -> "R̄[p$i, c$j, $k, $l, r$m]", pieces, contacts, coords2d, r_coeffs, regions;
-        lower_bound=-1, upper_bound=1)
+    r̄_vars = axis_array_vars(model, (i, j, k, l, m) -> "R̄[p$i, c$j, $k, $l, r$m]", pieces, contacts, coords2d, r_coeffs, regions)
     # τn_vars = axis_array_vars(model, (i, j, l) -> "Tn[p$i, c$j, $l]", pieces, contacts, f_coeffs;
     #     lower_bound=-1 * norm(g), upper_bound=1 * norm(g))
 
@@ -173,7 +175,7 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
                     m = findfirst(isequal(region_data0), region_data)
                     z_var = z_vars[piece, contact, regions(m)]
                     fix(z_var, 1, force=true)
-                    unset_binary(z_var) # to make Alpine happpy
+                    # unset_binary(z_var) # to make Alpine happpy
                     fix.(p_vars[piece, contact], p0, force=true)
                 end
             end
@@ -250,7 +252,10 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
             p = p_vars[piece, contact]
             for m in 1 : num_regions
                 region = regions(m)
+                region_min, region_max = p̄_extrema[region]
                 p̄ = p̄_vars[piece, contact, region]
+                set_lower_bound.(p̄, region_min)
+                set_upper_bound.(p̄, region_max)
                 A = region_data[m].A
                 b = region_data[m].b
                 transform = region_data[m].transform
@@ -258,17 +263,23 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
 
                 # Contact position constraints
                 @constraint model A * p̄ .<= b
-                @constraint model  (p - transform([p̄; 0])) .<= Mr * (1 - z)
-                @constraint model -(p - transform([p̄; 0])) .<= Mr * (1 - z)
+                p_aux = @variable model [1 : 3]
+                @constraint model p_aux .== transform([p̄; 0])
+                @constraint model  (p - p_aux) .<= Mr * (1 - z)
+                @constraint model -(p - p_aux) .<= Mr * (1 - z)
 
                 # CoP constraints
                 for l = 1 : r_num_coeffs
                     coeff = r_coeffs(l)
                     r = r_vars[piece, contact, coeff]
                     r̄ = r̄_vars[piece, contact, coeff, region]
+                    set_lower_bound.(r̄, region_min .- max_cop_distance)
+                    set_upper_bound.(r̄, region_max .+ max_cop_distance)
                     # @constraint model A * r̄ .<= b
-                    @constraint model  (r - transform([r̄; 0])) .<= Mr * (1 - z)
-                    @constraint model -(r - transform([r̄; 0])) .<= Mr * (1 - z)
+                    r_aux = @variable model [1 : 3]
+                    @constraint model r_aux .== transform([r̄; 0])
+                    @constraint model  (r - r_aux) .<= Mr * (1 - z)
+                    @constraint model -(r - r_aux) .<= Mr * (1 - z)
                     if max_cop_distance == 0
                         @constraint model r .== p
                     else
