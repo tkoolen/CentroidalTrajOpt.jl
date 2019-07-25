@@ -66,21 +66,21 @@ function create_environment()
             0.7,
             0.0,
             Float64[1 0; 0 1; -1 0; 0 -1],
-            0.15 * ones(4)
+            0.2 * ones(4)
     ))
     push!(region_data, ContactRegion(
-            AffineMap(one(RotMatrix{3}) * RotXYZ(0.1, -0.2, 0.3), SVector(0.7, 0.3, 0.3)),
+            AffineMap(one(RotMatrix{3}) * RotXYZ(0.1, -0.2, 0.3), SVector(0.7, 0.3, 0.2)),
             0.7,
             0.0,
             Float64[1 0; 0 1; -1 0; 0 -1],
-            0.15 * ones(4)
+            0.2 * ones(4)
     ))
     push!(region_data, ContactRegion(
-            AffineMap(one(RotMatrix{3}) * RotXYZ(-0.1, 0.2, 0.3), SVector(0.5, 1.0, 0.2)),
+            AffineMap(one(RotMatrix{3}) * RotXYZ(-0.1, 0.2, 0.3), SVector(0.6, 1.0, 0.1)),
             0.7,
             0.0,
             Float64[1 0; 0 1; -1 0; 0 -1],
-            0.15 * ones(4)
+            0.2 * ones(4)
     ))
     # push!(region_data, ContactRegion(
     #     AffineMap(one(RotMatrix{3}) * RotXYZ(0.0, 0.0, 0.0), SVector(1.1, 1.2, 0.1)),
@@ -202,7 +202,7 @@ for (bodyid, points) in foot_points
 end
 max_cop_distance = inside_foot_radius
 max_com_to_contact_distance = 1.07
-min_inter_contact_distance = 0.2# TODO: 2 * outside_foot_radius
+min_inter_contact_distance = 2 * outside_foot_radius
 region_offset = outside_foot_radius + 0.04
 
 ## Collision setup
@@ -235,7 +235,7 @@ cf = nothing
 # cf = c0# + SVector(0.8, 0.5, 0.05)
 # cf = c0 + SVector(0.05, 0.0, -0.05)
 
-check_kinematic_constraints_satisfied(contacts0, c0, max_com_to_contact_distance, min_inter_contact_distance)
+# check_kinematic_constraints_satisfied(contacts0, c0, max_com_to_contact_distance, min_inter_contact_distance)
 
 ## Create visualizer
 using MeshCat
@@ -263,8 +263,8 @@ end
 gui = GUI(mvis)
 if isempty(vis.core.scope.pool.connections)
     open(gui)
+    wait(gui)
 end
-sleep(1.)
 
 ## Optimizer
 # optimizer_factory = baron_optimizer_factory()
@@ -274,7 +274,7 @@ optimizer_factory = scip_optimizer_factory()
 problem = CentroidalTrajectoryProblem(optimizer_factory, region_data, c0, ċ0, contacts0;
     cf=cf, g=g,
     max_cop_distance=max_cop_distance, max_com_to_contact_distance=max_com_to_contact_distance, min_inter_contact_distance=min_inter_contact_distance,
-    num_pieces=8, c_degree=3,
+    num_pieces=10, c_degree=3,
     # objective_type=ObjectiveTypes.MIN_EXCURSION);
     objective_type=ObjectiveTypes.FEASIBILITY);
 

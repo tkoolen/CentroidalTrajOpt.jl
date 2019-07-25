@@ -380,15 +380,20 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
             end
         end
 
+
         # Inter-contact kinematic constraints
-        for j1 in 1 : num_contacts
-            contact1 = contacts(j1)
-            p1 = p_vars[piece, contact1]
-            for j2 in j1 + 1 : num_contacts
-                contact2 = contacts(j2)
-                p2 = p_vars[piece, contact2]
-                @constraint model sum(x -> x^2, (p1 - p2)) >= min_inter_contact_distance^2
+        if i > 1
+            for j1 in 1 : num_contacts
+                contact1 = contacts(j1)
+                p1 = p_vars[piece, contact1]
+                for j2 in j1 + 1 : num_contacts
+                    contact2 = contacts(j2)
+                    p2 = p_vars[piece, contact2]
+                    @constraint model sum(x -> x^2, (p1 - p2)) >= min_inter_contact_distance^2
+                end
             end
+            # FIXME: hack:
+            @constraint model p_vars[piece, contacts(1), coords(2)] - p_vars[piece, contacts(2), coords(2)] >= -max_cop_distance
         end
 
         cprev = c

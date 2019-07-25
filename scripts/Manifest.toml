@@ -40,7 +40,7 @@ version = "0.3.0"
 
 [[BARON]]
 deps = ["MathOptInterface", "MathProgBase", "Test"]
-git-tree-sha1 = "812d10b843a8a476cfe48af94589aaa3b1bf8c08"
+git-tree-sha1 = "5b61de419a5a1560fa0786583d794a61d42cdac6"
 repo-rev = "tk/moi"
 repo-url = "git@github.com:tkoolen/BARON.jl.git"
 uuid = "2e2ca445-9e14-5b13-8677-4410f177f82b"
@@ -62,10 +62,10 @@ uuid = "b99e7846-7c00-51b0-8f62-c81ae34c0232"
 version = "0.5.6"
 
 [[Blink]]
-deps = ["Base64", "BinDeps", "Distributed", "JSExpr", "JSON", "Lazy", "Libdl", "Logging", "MacroTools", "Mustache", "Mux", "Reexport", "Sockets", "Test", "WebIO", "WebSockets"]
-git-tree-sha1 = "5b0ca771f6e59bbba820888af8a6edbcc62bc86a"
+deps = ["Base64", "BinDeps", "Distributed", "JSExpr", "JSON", "Lazy", "Logging", "MacroTools", "Mustache", "Mux", "Reexport", "Sockets", "WebIO", "WebSockets"]
+git-tree-sha1 = "cbce79ce8bfa1a576bb0a166ce75e7b92a575098"
 uuid = "ad839575-38b3-5650-b840-f874b8c74a25"
-version = "0.10.1"
+version = "0.12.0"
 
 [[CEnum]]
 git-tree-sha1 = "5a2679abe17f5e70d90753940dcb7f15e61369d4"
@@ -77,6 +77,12 @@ deps = ["Libdl", "LinQuadOptInterface", "LinearAlgebra", "MathProgBase", "Pkg", 
 git-tree-sha1 = "2a092f1632efcd648041c2d5c91aecbc0c142d41"
 uuid = "a076750e-1247-5638-91d2-ce28b192dca0"
 version = "0.5.0"
+
+[[CRlibm]]
+deps = ["Libdl", "Test"]
+git-tree-sha1 = "805164abcd31facf3a7e5b7d803a0d16b23329bc"
+uuid = "96374032-68de-5a5b-8d9e-752f78720389"
+version = "0.7.1"
 
 [[CSSUtil]]
 deps = ["Colors", "Compat", "JSON", "Measures", "Pkg", "WebIO"]
@@ -102,7 +108,7 @@ uuid = "7057c7e9-c182-5462-911a-8362d720325c"
 version = "0.2.5"
 
 [[CentroidalTrajOpt]]
-deps = ["AxisArrays", "CoordinateTransformations", "EnhancedGJK", "FileIO", "GeometryTypes", "JLD2", "JuMP", "LinearAlgebra", "MeshCat", "OrdinaryDiffEq", "Polyhedra", "QPControl", "QPWalkingControl", "RigidBodySim", "Rotations", "SCIP", "StaticArrays", "StaticUnivariatePolynomials"]
+deps = ["AxisArrays", "CoordinateTransformations", "EnhancedGJK", "FileIO", "GeometryTypes", "IntervalArithmetic", "JLD2", "JuMP", "LinearAlgebra", "MeshCat", "OrdinaryDiffEq", "Polyhedra", "QPControl", "QPWalkingControl", "RigidBodyDynamics", "RigidBodySim", "Rotations", "SCIP", "StaticArrays", "StaticUnivariatePolynomials"]
 path = ".."
 uuid = "e21b34eb-f2c9-558f-afd6-4aa30e1b9e96"
 version = "0.1.0"
@@ -231,6 +237,11 @@ git-tree-sha1 = "4e12f1e00d1f5350048cea7d78cbcc40972f6a5c"
 uuid = "3d39a06a-b57e-5769-b499-4d62b23c243f"
 version = "0.4.0"
 
+[[ErrorfreeArithmetic]]
+git-tree-sha1 = "a2b7d5a7962e5bfaab0e2e87c9cde7d3087f4e2c"
+uuid = "90fa49ef-747e-5e6f-a989-263ba693cf1a"
+version = "0.4.0"
+
 [[ExponentialUtilities]]
 deps = ["LinearAlgebra", "Printf", "SparseArrays"]
 git-tree-sha1 = "85e1ce16aa9b98793df704e17e7a0ceadefe404f"
@@ -242,6 +253,12 @@ deps = ["BinaryProvider", "Libdl"]
 git-tree-sha1 = "5fbb3092252b78c6082a5cce2316c60a6152fbc9"
 uuid = "c87230d0-a227-11e9-1b43-d7ebe4e7570a"
 version = "0.2.1"
+
+[[FastRounding]]
+deps = ["ErrorfreeArithmetic", "Test"]
+git-tree-sha1 = "224175e213fd4fe112db3eea05d66b308dc2bf6b"
+uuid = "fa42c844-2597-5d31-933b-ebd51ab2693f"
+version = "0.2.0"
 
 [[FileIO]]
 deps = ["Pkg"]
@@ -338,6 +355,12 @@ deps = ["AxisAlgorithms", "LinearAlgebra", "OffsetArrays", "Random", "Ratios", "
 git-tree-sha1 = "e1bac96b5ef3ea23b50e801b4a988ec21861a47f"
 uuid = "a98d9a8b-a2ab-59e6-89dd-64a1c18fca59"
 version = "0.12.2"
+
+[[IntervalArithmetic]]
+deps = ["CRlibm", "FastRounding", "LinearAlgebra", "Markdown", "RecipesBase", "SetRounding", "StaticArrays"]
+git-tree-sha1 = "bc228a23925eb3a98a7bf5c2f4dc2a2bb7b0842b"
+uuid = "d1acc4aa-44c8-5952-acd4-ba5d80a2a253"
+version = "0.16.0"
 
 [[IntervalSets]]
 deps = ["Compat"]
@@ -774,6 +797,12 @@ uuid = "ea8e919c-243c-51af-8825-aaa63cd721ce"
 [[Serialization]]
 uuid = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
 
+[[SetRounding]]
+deps = ["Test"]
+git-tree-sha1 = "faca28c7937138d560ede5bfef2076d0cdf3584b"
+uuid = "3cc68bcd-71a2-5612-b932-767ffbe40ab0"
+version = "0.2.0"
+
 [[SharedArrays]]
 deps = ["Distributed", "Mmap", "Random", "Serialization"]
 uuid = "1a1011a3-84de-559e-8e89-a11a2f7dc383"
@@ -887,10 +916,10 @@ uuid = "c4a57d5a-5b31-53a6-b365-19f8c011fbd6"
 version = "0.4.0"
 
 [[WebIO]]
-deps = ["AssetRegistry", "Base64", "Compat", "Distributed", "FunctionalCollections", "JSON", "Logging", "Observables", "Random", "Requires", "Sockets", "UUIDs", "WebSockets", "Widgets"]
-git-tree-sha1 = "458ebbd85da851b01bed01e6321b0d8f4c7044b0"
+deps = ["AssetRegistry", "Base64", "Compat", "Distributed", "FunctionalCollections", "JSON", "Logging", "Observables", "Pkg", "Random", "Requires", "Sockets", "UUIDs", "WebSockets", "Widgets"]
+git-tree-sha1 = "2b61c56f6c4c7b3880976332de6ce1028e015f90"
 uuid = "0f1e0344-ec1d-5b48-a673-e5cf874b6c29"
-version = "0.8.6"
+version = "0.8.8"
 
 [[WebSockets]]
 deps = ["Base64", "Dates", "Distributed", "HTTP", "Logging", "Random", "Sockets", "Test"]
