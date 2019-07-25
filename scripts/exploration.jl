@@ -69,14 +69,14 @@ function create_environment()
             0.2 * ones(4)
     ))
     push!(region_data, ContactRegion(
-            AffineMap(one(RotMatrix{3}) * RotXYZ(0.1, -0.2, 0.3), SVector(0.7, 0.3, 0.2)),
+            AffineMap(one(RotMatrix{3}) * RotXYZ(0.1, -0.2, 0.3), SVector(0.75, 0.3, 0.2)),
             0.7,
             0.0,
             Float64[1 0; 0 1; -1 0; 0 -1],
             0.2 * ones(4)
     ))
     push!(region_data, ContactRegion(
-            AffineMap(one(RotMatrix{3}) * RotXYZ(-0.1, 0.2, 0.3), SVector(0.6, 1.0, 0.1)),
+            AffineMap(one(RotMatrix{3}) * RotXYZ(-0.1, 0.2, 0.3), SVector(0.65, 1.15, 0.1)),
             0.7,
             0.0,
             Float64[1 0; 0 1; -1 0; 0 -1],
@@ -87,7 +87,7 @@ function create_environment()
     #     0.7,
     #     0.0,
     #     Float64[1 0; 0 1; -1 0; 0 -1],
-    #     0.1 * ones(4)
+    #     0.2 * ones(4)
     # ))
     region_data
 end
@@ -274,7 +274,7 @@ optimizer_factory = scip_optimizer_factory()
 problem = CentroidalTrajectoryProblem(optimizer_factory, region_data, c0, ċ0, contacts0;
     cf=cf, g=g,
     max_cop_distance=max_cop_distance, max_com_to_contact_distance=max_com_to_contact_distance, min_inter_contact_distance=min_inter_contact_distance,
-    num_pieces=10, c_degree=3,
+    num_pieces=12, c_degree=3,
     # objective_type=ObjectiveTypes.MIN_EXCURSION);
     objective_type=ObjectiveTypes.FEASIBILITY);
 

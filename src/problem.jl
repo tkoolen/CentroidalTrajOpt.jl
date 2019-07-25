@@ -54,7 +54,7 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
         c_margin_xy = 0.5,
         c_margin_z = 1.2,
         max_force = 3 * norm(g),
-        Δpmax = 2.0#0.8 # TODO
+        Δpmax = 0.7 # TODO
     )
 
     c_num_coeffs = c_degree + 1
