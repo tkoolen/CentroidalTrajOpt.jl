@@ -175,9 +175,9 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
 
         # Contact/region assignment constraints
         for j in 1 : num_contacts
-            # Each contact can be assigned to at most one region
             contact = contacts(j)
 
+            # Each contact can be assigned to at most one region
             if optimizer_does_sos1
                 @constraint model z_vars[piece, contact] in MOI.SOS1(collect(Float64, 1 : num_regions))
             else
@@ -209,6 +209,9 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
                 # This is an ℓ₁-norm constraint.
                 Δz = z_vars[piece, contact] - z_vars[pieces(i - 1), contact]
                 constrain_l1_norm(model, Δz, 1; add_bounds=true)
+
+                # Two swing segments in a row is not allowed.
+                @constraint model sum(z_vars[piece, contact]) + sum(z_vars[pieces(i - 1), contact]) >= 1
 
                 # Contact position p may only change when the contact is not assigned to a region,
                 # i.e., when ∑ₘ zᵢ,ⱼ,ₘ = 0.
