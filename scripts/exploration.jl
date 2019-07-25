@@ -150,6 +150,8 @@ function create_controller(
     )
     # Low level controller
     optimizer = OSQP.Optimizer(verbose=false, eps_abs=1e-5, eps_rel=1e-5, max_iter=5000, adaptive_rho_interval=25)
+    pelvis_gains_xy = QPWalkingControl.critically_damped_gains(100.0)
+    pelvis_gains_z = QPWalkingControl.critically_damped_gains(25.0)
     lowlevel = MomentumBasedController{4}(mechanism, optimizer, floatingjoint = floating_joint);
     for bodyid in contact_body_ids
         points = foot_points[bodyid]
@@ -175,8 +177,12 @@ function create_controller(
     end
 
     # High level controller
+    pelvis_gains = PDGains(
+        Diagonal(SVector(pelvis_gains_xy.k, pelvis_gains_xy.k, pelvis_gains_z.k)),
+        Diagonal(SVector(pelvis_gains_xy.d, pelvis_gains_xy.d, pelvis_gains_z.d))
+    )
     HumanoidQPController(lowlevel, pelvis, nominal_state,
-        state_machine, collect(values(state_machine.end_effector_controllers)), linear_momentum_controller)
+        state_machine, collect(values(state_machine.end_effector_controllers)), linear_momentum_controller, pelvisgains = pelvis_gains)
 end
 
 ## Robot setup
@@ -200,7 +206,7 @@ for (bodyid, points) in foot_points
         global outside_foot_radius = max(outside_foot_radius, dist)
     end
 end
-max_cop_distance = inside_foot_radius
+max_cop_distance = inside_foot_radius# - 0.01
 max_com_to_contact_distance = 1.07
 min_inter_contact_distance = 2 * outside_foot_radius
 region_offset = outside_foot_radius + 0.04
@@ -275,9 +281,9 @@ optimizer_factory = scip_optimizer_factory()
 problem = CentroidalTrajectoryProblem(optimizer_factory, region_data, c0, ċ0, contacts0;
     cf=cf, g=g,
     max_cop_distance=max_cop_distance, max_com_to_contact_distance=max_com_to_contact_distance, min_inter_contact_distance=min_inter_contact_distance,
-    num_pieces=10, c_degree=3,
-    # objective_type=ObjectiveTypes.MIN_EXCURSION);
+    num_pieces=9, c_degree=3,
     objective_type=ObjectiveTypes.FEASIBILITY);
+    # objective_type=ObjectiveTypes.MAX_HEIGHT);
 
 disallow_jumping!(problem)
 
@@ -288,7 +294,7 @@ fix.(problem.z_vars[problem.pieces(problem.pieces[end]), problem.regions(problem
 # TODO: use interval arithmetic to get rough boxes
 
 if optimizer_factory.constructor == SCIP.Optimizer
-    problem.model.optimize_hook = scip_optimize_hook
+    set_optimize_hook(problem.model, scip_optimize_hook)
 end
 
 relax = optimizer_factory.constructor == Gurobi.Optimizer || optimizer_factory.constructor == CPLEX.Optimizer
@@ -309,8 +315,12 @@ end
 
 reoptimize = false
 if reoptimize
+    set_optimize_hook(problem.model, nothing)
+
+    @objective problem.model Max sum(problem.c_vars[problem.c_coeffs(3)])
+
     ## Final region constraint
-    fix.(problem.z_vars[problem.pieces(problem.pieces[end]), problem.regions(problem.regions[2])], 1.0)
+    # fix.(problem.z_vars[problem.pieces(problem.pieces[end]), problem.regions(problem.regions[end])], 1.0)
 
     # ## Re-optimize with final CoM constraint
     # cx_desired = c0[1] + 0.5
@@ -329,7 +339,7 @@ end
 ## Result visualization
 set_com_trajectory!(cvis, result)
 set_state!(cvis, result, 0.0)
-plan_animation = Animation(cvis, result)
+plan_animation = Animation(cvis, result, show_cones=true)
 setanimation!(vis, plan_animation)
 
 ## Optimality
@@ -456,8 +466,8 @@ if simulate
     sim_animation = Animation(mvis, sol)
 
     # setanimation!(vis, plan_animation);
-    setanimation!(vis, sim_animation);
-    # setanimation!(vis, merge(plan_animation, sim_animation));
+    # setanimation!(vis, sim_animation);
+    setanimation!(vis, merge(plan_animation, sim_animation));
 end
 
 ## Set up visualizer for creating videos

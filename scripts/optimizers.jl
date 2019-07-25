@@ -25,8 +25,8 @@ function scip_optimize_hook(model::JuMP.Model)
     # SCIP.set_parameter(mscip, "heuristics/feaspump/freq", 5)
     SCIP.set_parameter(mscip, "heuristics/rens/freq", -1)
     SCIP.set_parameter(mscip, "reoptimization/enable", true)
-    # SCIP.set_parameter(mscip, "limits/time", 2 * 60)
-    SCIP.set_parameter(mscip, "limits/time", 2 * 60 * 60)
+    SCIP.set_parameter(mscip, "limits/time", 2 * 60)
+    # SCIP.set_parameter(mscip, "limits/time", 2 * 60 * 60)
     ret = MOI.optimize!(caching_optimizer)
     @assert caching_optimizer.optimizer.model.mscip === mscip
     return ret

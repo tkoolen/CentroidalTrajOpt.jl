@@ -31,6 +31,7 @@ export ObjectiveType
     FEASIBILITY
     MIN_TIME
     MIN_EXCURSION
+    MAX_HEIGHT
 end
 end
 using .ObjectiveTypes
@@ -148,6 +149,8 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
     if objective_type == ObjectiveTypes.MIN_EXCURSION
         # @constraint model objval >= sum((c_vars[pieces(i), c_coeffs(l)] - c0) ⋅ (c_vars[pieces(i), c_coeffs(l)] - c0) for i in 1 : num_pieces, l in 1 : c_num_coeffs)
         @objective model Min sum(x -> x ⋅ x, (c_vars[pieces(i), c_coeffs(l)] - c0) for i in 1 : num_pieces, l in 1 : c_num_coeffs)
+    elseif objective_type == ObjectiveTypes.MAX_HEIGHT
+        @objective model Max sum(c_vars[c_coeffs(3)])
     end
     # @objective model Max sum(z_vars)
 

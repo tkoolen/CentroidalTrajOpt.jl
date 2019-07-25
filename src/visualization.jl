@@ -103,7 +103,7 @@ end
 function MeshCat.Animation(
         cvis::CentroidalTrajectoryVisualizer,
         result::CentroidalTrajectoryResult;
-        fps::Number=30)
+        fps::Number=30, kwargs...)
     t0 = first(result.break_times)
     tf = last(result.break_times)
     animation = Animation(fps)
@@ -111,7 +111,7 @@ function MeshCat.Animation(
     for frame in 0 : num_frames
         t = t0 + frame / fps
         atframe(animation, frame) do
-            set_state!(cvis, result, t)
+            set_state!(cvis, result, t; kwargs...)
         end
     end
     return animation
