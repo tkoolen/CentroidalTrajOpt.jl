@@ -62,10 +62,10 @@ uuid = "b99e7846-7c00-51b0-8f62-c81ae34c0232"
 version = "0.5.6"
 
 [[Blink]]
-deps = ["Base64", "BinDeps", "Distributed", "JSExpr", "JSON", "Lazy", "Logging", "MacroTools", "Mustache", "Mux", "Reexport", "Sockets", "WebIO", "WebSockets"]
-git-tree-sha1 = "cbce79ce8bfa1a576bb0a166ce75e7b92a575098"
+deps = ["Base64", "BinDeps", "Distributed", "JSExpr", "JSON", "Lazy", "Libdl", "Logging", "MacroTools", "Mustache", "Mux", "Reexport", "Sockets", "Test", "WebIO", "WebSockets"]
+git-tree-sha1 = "5b0ca771f6e59bbba820888af8a6edbcc62bc86a"
 uuid = "ad839575-38b3-5650-b840-f874b8c74a25"
-version = "0.12.0"
+version = "0.10.1"
 
 [[CEnum]]
 git-tree-sha1 = "5a2679abe17f5e70d90753940dcb7f15e61369d4"
@@ -916,10 +916,12 @@ uuid = "c4a57d5a-5b31-53a6-b365-19f8c011fbd6"
 version = "0.4.0"
 
 [[WebIO]]
-deps = ["AssetRegistry", "Base64", "Compat", "Distributed", "FunctionalCollections", "JSON", "Logging", "Observables", "Pkg", "Random", "Requires", "Sockets", "UUIDs", "WebSockets", "Widgets"]
-git-tree-sha1 = "2b61c56f6c4c7b3880976332de6ce1028e015f90"
+deps = ["AssetRegistry", "Base64", "Compat", "Distributed", "FunctionalCollections", "JSON", "Logging", "Observables", "Random", "Requires", "Sockets", "UUIDs", "WebSockets", "Widgets"]
+git-tree-sha1 = "458ebbd85da851b01bed01e6321b0d8f4c7044b0"
+repo-rev = "tk/develop"
+repo-url = "https://github.com/tkoolen/WebIO.jl"
 uuid = "0f1e0344-ec1d-5b48-a673-e5cf874b6c29"
-version = "0.8.8"
+version = "0.8.6"
 
 [[WebSockets]]
 deps = ["Base64", "Dates", "Distributed", "HTTP", "Logging", "Random", "Sockets", "Test"]

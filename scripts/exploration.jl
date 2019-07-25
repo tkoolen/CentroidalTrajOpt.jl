@@ -83,7 +83,7 @@ function create_environment()
             0.2 * ones(4)
     ))
     # push!(region_data, ContactRegion(
-    #     AffineMap(one(RotMatrix{3}) * RotXYZ(0.0, 0.0, 0.0), SVector(1.1, 1.2, 0.1)),
+    #     AffineMap(one(RotMatrix{3}) * RotXYZ(0.0, 0.0, 0.0), SVector(1.4, 1.2, 0.1)),
     #     0.7,
     #     0.0,
     #     Float64[1 0; 0 1; -1 0; 0 -1],
@@ -265,6 +265,7 @@ if isempty(vis.core.scope.pool.connections)
     open(gui)
     wait(gui)
 end
+sleep(1)
 
 ## Optimizer
 # optimizer_factory = baron_optimizer_factory()
@@ -456,7 +457,7 @@ if simulate
 
     # setanimation!(vis, plan_animation);
     setanimation!(vis, sim_animation);
-    setanimation!(vis, merge(plan_animation, sim_animation));
+    # setanimation!(vis, merge(plan_animation, sim_animation));
 end
 
 ## Set up visualizer for creating videos

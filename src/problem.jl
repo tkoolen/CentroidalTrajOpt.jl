@@ -136,12 +136,9 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
     c_min, c_max = r_min - SVector(c_margin_xy, c_margin_xy, 0.0), r_max + SVector(c_margin_xy, c_margin_xy, c_margin_z)
 
     # Continuous variables
-    c_vars = axis_array_vars(model, (i, k, l) -> "C[p$i, $k, $l]",pieces, coords, c_coeffs;
-        lower_bound=-2, upper_bound=2)
-    f_vars = axis_array_vars(model, (i, j, k, l) -> "F[p$i, c$j, $k, $l]", pieces, contacts, coords, f_coeffs;
-        lower_bound=-max_force, upper_bound=max_force)
-    f̄_vars = axis_array_vars(model, (i, j, k, l, m) -> "F̄[p$i, c$j, $k, $l, r$m]", pieces, contacts, coords, f_coeffs, regions;
-        lower_bound=-max_force, upper_bound=max_force)
+    c_vars = axis_array_vars(model, (i, k, l) -> "C[p$i, $k, $l]",pieces, coords, c_coeffs)
+    f_vars = axis_array_vars(model, (i, j, k, l) -> "F[p$i, c$j, $k, $l]", pieces, contacts, coords, f_coeffs)
+    f̄_vars = axis_array_vars(model, (i, j, k, l, m) -> "F̄[p$i, c$j, $k, $l, r$m]", pieces, contacts, coords, f_coeffs, regions)
     p_vars = axis_array_vars(model, (i, j, k) -> "P[p$i, c$j, $k]", pieces, contacts, coords)
     p̄_vars = axis_array_vars(model, (i, j, k, m) -> "P̄[p$i, c$j, $k, r$m]", pieces, contacts, coords2d, regions)
     r_vars = axis_array_vars(model, (i, j, k, l) -> "R[p$i, c$j, $k, $l]", pieces, contacts, coords, r_coeffs)
@@ -342,6 +339,9 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
                     f̄xy = f̄[1 : 2]
                     f̄z = f̄[3]
                     set_lower_bound(f̄z, 0)
+                    set_upper_bound(f̄z, max_force)
+                    set_lower_bound.(f̄xy, -μ * max_force)
+                    set_upper_bound.(f̄xy, +μ * max_force)
                     # auxiliary variable needed for SecondOrderCone constraint:
                     μf̄z = @variable model lower_bound=0 upper_bound=μ * upper_bound(f̄z)
                     @constraint model μf̄z == μ * f̄z
