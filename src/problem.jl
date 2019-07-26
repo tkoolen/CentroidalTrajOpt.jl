@@ -54,7 +54,8 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
         min_Δt = 0.6,
         max_Δt = 1.5,
         c_margin_xy = 0.5,
-        c_margin_z = 1.2,
+        c_margin_z_min = 0.5,
+        c_margin_z_max = 1.2,
         max_force = 3 * norm(g),
         Δpmax = 0.7 # TODO
     )
@@ -135,7 +136,7 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
     end
     p_min, p_max = polyhedron_extrema(polyhedron(vrep(p_vertices)))
     r_min, r_max = p_min .- max_cop_distance, p_max .+ max_cop_distance
-    c_min, c_max = r_min - SVector(c_margin_xy, c_margin_xy, 0.0), r_max + SVector(c_margin_xy, c_margin_xy, c_margin_z)
+    c_min, c_max = r_min - SVector(c_margin_xy, c_margin_xy, -c_margin_z_min), r_max + SVector(c_margin_xy, c_margin_xy, c_margin_z_max)
 
     # Continuous variables
     c_vars = axis_array_vars(model, (i, k, l) -> "C[p$i, $k, $l]",pieces, coords, c_coeffs)
