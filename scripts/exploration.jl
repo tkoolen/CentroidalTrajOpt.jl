@@ -75,13 +75,13 @@ function create_environment()
             Float64[1 0; 0 1; -1 0; 0 -1],
             0.2 * ones(4)
     ))
-    # push!(region_data, ContactRegion(
-    #         AffineMap(one(RotMatrix{3}) * RotXYZ(-0.1, 0.2, 0.3), SVector(0.65, 1.15, 0.1)),
-    #         0.7,
-    #         0.0,
-    #         Float64[1 0; 0 1; -1 0; 0 -1],
-    #         0.2 * ones(4)
-    # ))
+    push!(region_data, ContactRegion(
+            AffineMap(one(RotMatrix{3}) * RotXYZ(-0.1, 0.2, 0.3), SVector(0.85, 1.15, 0.1)),
+            0.7,
+            0.0,
+            Float64[1 0; 0 1; -1 0; 0 -1],
+            0.2 * ones(4)
+    ))
     # push!(region_data, ContactRegion(
     #     AffineMap(one(RotMatrix{3}) * RotXYZ(0.0, 0.0, 0.0), SVector(1.4, 1.2, 0.1)),
     #     0.7,
@@ -115,7 +115,7 @@ function create_contact_model(
         frame = world_frame
         group = CollisionElement[CollisionElement(root_body(mechanism), frame, geometry)]
         push!(contact_model, group)
-        tangential_model = ViscoelasticCoulombModel(0.8, k_tangential, b_tangential)
+        tangential_model = ViscoelasticCoulombModel(10.0, k_tangential, b_tangential)
         contact_force_model = SplitContactForceModel(normal_model, tangential_model)
         set_contact_force_model!(contact_model, foot_collision_elements, group, contact_force_model)
     else
@@ -207,7 +207,8 @@ for (bodyid, points) in foot_points
     end
 end
 max_cop_distance = inside_foot_radius# - 0.01
-max_com_to_contact_distance = 1.07
+min_com_to_contact_distance = 0.8
+max_com_to_contact_distance = 1.05
 min_inter_contact_distance = 2 * outside_foot_radius
 region_offset = outside_foot_radius + 0.04
 
@@ -280,8 +281,10 @@ optimizer_factory = scip_optimizer_factory()
 ## Problem
 problem = CentroidalTrajectoryProblem(optimizer_factory, region_data, c0, ċ0, contacts0;
     cf=cf, g=g,
-    max_cop_distance=max_cop_distance, max_com_to_contact_distance=max_com_to_contact_distance, min_inter_contact_distance=min_inter_contact_distance,
-    num_pieces=4, c_degree=3,
+    min_Δt=0.6, max_Δt=1.5,
+    max_cop_distance=max_cop_distance, min_com_to_contact_distance=min_com_to_contact_distance,
+    max_com_to_contact_distance=max_com_to_contact_distance, min_inter_contact_distance=min_inter_contact_distance,
+    num_pieces=10, c_degree=3,
     objective_type=ObjectiveTypes.FEASIBILITY);
     # objective_type=ObjectiveTypes.MAX_HEIGHT);
 
@@ -310,7 +313,7 @@ if backend(problem.model).optimizer.model isa SCIP.Optimizer
     mscip = backend(problem.model).optimizer.model.mscip
     # SCIP.print_statistics(mscip)
     SCIP.print_heuristic_statistics(mscip)
-    # SCIP.SCIPprintVersion(mscip, Libc.FILE(0))
+    SCIP.SCIPprintVersion(mscip, Libc.FILE(0))
 end
 
 reoptimize = false

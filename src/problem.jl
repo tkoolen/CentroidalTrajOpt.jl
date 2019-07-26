@@ -47,6 +47,7 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
         num_pieces = 2,
         g = SVector(0.0, 0.0, -9.81),
         max_cop_distance = 0.1,
+        min_com_to_contact_distance,
         max_com_to_contact_distance,
         min_inter_contact_distance,
         objective_type::ObjectiveType = FEASIBILITY,
@@ -377,7 +378,8 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
             p = p_vars[piece, contact]
             for l in 1 : c_num_coeffs
                 cpoint = map(x -> x.coeffs[l], c)
-                @constraint model cpoint[3] - p[3] >= 0.75 # TODO
+                # @constraint model cpoint[3] - p[3] >= 0.75 # TODO
+                @constraint model sum(x -> x^2, cpoint - p) >= min_com_to_contact_distance^2
                 # set_lower_bound(cpoint[3], 0.7)
                 # @constraint model cpoint - p .<= 1.5
                 # @constraint model p - cpoint .<= 1.5
