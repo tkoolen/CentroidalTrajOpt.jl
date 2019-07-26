@@ -75,13 +75,13 @@ function create_environment()
             Float64[1 0; 0 1; -1 0; 0 -1],
             0.2 * ones(4)
     ))
-    push!(region_data, ContactRegion(
-            AffineMap(one(RotMatrix{3}) * RotXYZ(-0.1, 0.2, 0.3), SVector(0.65, 1.15, 0.1)),
-            0.7,
-            0.0,
-            Float64[1 0; 0 1; -1 0; 0 -1],
-            0.2 * ones(4)
-    ))
+    # push!(region_data, ContactRegion(
+    #         AffineMap(one(RotMatrix{3}) * RotXYZ(-0.1, 0.2, 0.3), SVector(0.65, 1.15, 0.1)),
+    #         0.7,
+    #         0.0,
+    #         Float64[1 0; 0 1; -1 0; 0 -1],
+    #         0.2 * ones(4)
+    # ))
     # push!(region_data, ContactRegion(
     #     AffineMap(one(RotMatrix{3}) * RotXYZ(0.0, 0.0, 0.0), SVector(1.4, 1.2, 0.1)),
     #     0.7,
@@ -281,7 +281,7 @@ optimizer_factory = scip_optimizer_factory()
 problem = CentroidalTrajectoryProblem(optimizer_factory, region_data, c0, ċ0, contacts0;
     cf=cf, g=g,
     max_cop_distance=max_cop_distance, max_com_to_contact_distance=max_com_to_contact_distance, min_inter_contact_distance=min_inter_contact_distance,
-    num_pieces=9, c_degree=3,
+    num_pieces=4, c_degree=3,
     objective_type=ObjectiveTypes.FEASIBILITY);
     # objective_type=ObjectiveTypes.MAX_HEIGHT);
 
@@ -315,25 +315,12 @@ end
 
 reoptimize = false
 if reoptimize
-    set_optimize_hook(problem.model, nothing)
-
+    if backend(problem.model).optimizer.model isa SCIP.Optimizer
+        mscip = backend(problem.model).optimizer.model.mscip
+        SCIP.SCIPsetEmphasis(mscip, SCIP.SCIP_PARAMEMPHASIS_OPTIMALITY, true)
+    end
     @objective problem.model Max sum(problem.c_vars[problem.c_coeffs(3)])
-
-    ## Final region constraint
-    # fix.(problem.z_vars[problem.pieces(problem.pieces[end]), problem.regions(problem.regions[end])], 1.0)
-
-    # ## Re-optimize with final CoM constraint
-    # cx_desired = c0[1] + 0.5
-    # # cy_desired = c0[2] + 0.5
-    # let
-    #     pieces = problem.pieces
-    #     c_coeffs = problem.c_coeffs
-    #     cf = problem.c_vars[pieces(last(pieces)), c_coeffs(last(c_coeffs))]
-    #     JuMP.fix(cf[1], cx_desired, force=true)
-    #     # JuMP.fix(cf[2], cy_desired, force=true)
-    #     # JuMP.fix.(cf, cf_desired, force=true)
-    # end
-    result = CentroidalTrajOpt.solve!(problem)
+    result = CentroidalTrajOpt.solve!(problem; ignore_optimize_hook=true)
 end
 
 ## Result visualization

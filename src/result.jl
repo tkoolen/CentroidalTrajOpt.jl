@@ -62,8 +62,8 @@ function CentroidalTrajectoryResult(problem::CentroidalTrajectoryProblem)
     CentroidalTrajectoryResult(break_times, c, fs, ps, rs, #=τns,=# zs)
 end
 
-function solve!(problem::CentroidalTrajectoryProblem)
-    optimize!(problem.model)
+function solve!(problem::CentroidalTrajectoryProblem; ignore_optimize_hook::Bool=problem.model.optimize_hook === nothing)
+    optimize!(problem.model, ignore_optimize_hook=ignore_optimize_hook)
     CentroidalTrajectoryResult(problem)
 end
 

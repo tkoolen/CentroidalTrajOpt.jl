@@ -787,7 +787,9 @@ version = "0.11.1"
 
 [[SCIP]]
 deps = ["CEnum", "Libdl", "MathOptInterface"]
-git-tree-sha1 = "af2884acfb9ed87c94e6f823f8688fa4419ea3e6"
+git-tree-sha1 = "e3ced1e0368f701fce514f00294336b88b76cd48"
+repo-rev = "tk/develop"
+repo-url = "git@github.com:tkoolen/SCIP.jl.git"
 uuid = "82193955-e24f-5292-bf16-6f2c5261a85f"
 version = "0.8.0"
 
