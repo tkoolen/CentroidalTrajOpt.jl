@@ -153,13 +153,17 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
     f_vars = axis_array_vars(model, (i, j, k, l) -> "F[p$i, c$j, $k, $l]", pieces, contacts, coords, f_coeffs)
     f̄_vars = axis_array_vars(model, (i, j, k, l, m) -> "F̄[p$i, c$j, $k, $l, r$m]", pieces, contacts, coords, f_coeffs, regions)
     p_vars = axis_array_vars(model, (i, j, k) -> "P[p$i, c$j, $k]", pieces, contacts, coords)
-    p̄_vars = axis_array_vars(model, (i, j, k, m) -> "P̄[p$i, c$j, $k, r$m]", pieces, contacts, coords2d, regions)
     r_vars = axis_array_vars(model, (i, j, k, l) -> "R[p$i, c$j, $k, $l]", pieces, contacts, coords, r_coeffs)
-    r̄_vars = axis_array_vars(model, (i, j, k, l, m) -> "R̄[p$i, c$j, $k, $l, r$m]", pieces, contacts, coords2d, r_coeffs, regions)
     λ_vars = let axes = (pieces, contacts, regions)
         AxisArray(map(Iterators.product(map(axis -> axis.val, axes)...)) do (i, j, m)
             p_polyhedron = p_polyhedra[regions(m)]
-            [@variable(model, base_name="Lp[p$i, c$j, r$m, $q]", lower_bound=0, upper_bound=1) for q in 1 : Polyhedra.npoints(p_polyhedron)]
+            [@variable(model, base_name="L[p$i, c$j, r$m, $q]", lower_bound=0, upper_bound=1) for q in 1 : Polyhedra.npoints(p_polyhedron)]
+        end, axes)
+    end
+    μ_vars = let axes = (pieces, contacts, regions, r_coeffs)
+        AxisArray(map(Iterators.product(map(axis -> axis.val, axes)...)) do (i, j, m, l)
+            p_polyhedron = p_polyhedra[regions(m)]
+            [@variable(model, base_name="M[p$i, c$j, r$m, $l, $q]") for q in 1 : Polyhedra.npoints(p_polyhedron)]
         end, axes)
     end
 
@@ -290,7 +294,7 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
             p = p_vars[piece, contact]
 
             # p should be a convex combination of the vertices with λs as multipliers
-            @constraint model sum(sum, λ_vars[piece, contact]) <= 1
+            @constraint model sum(sum, λ_vars[piece, contact]) == 1
             @constraint model p .== sum(1 : num_regions) do m
                 region = regions(m)
                 p_polyhedron = p_polyhedra[region]
@@ -300,6 +304,25 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
                 end
             end
 
+            for l = 1 : r_num_coeffs
+                coeff = r_coeffs(l)
+                r = r_vars[piece, contact, coeff]
+
+                # r should be an affine combination of the vertices with μs as multipliers
+                @constraint model sum(sum, μ_vars[piece, contact, coeff]) == 1
+                @constraint model r .== sum(1 : num_regions) do m
+                    region = regions(m)
+                    p_polyhedron = p_polyhedra[region]
+                    μ = μ_vars[piece, contact, region, coeff]
+                    sum(enumerate(Polyhedra.points(p_polyhedron))) do (q, point)
+                        μ[q] .* point
+                    end
+                end
+
+                # r should be within max_cop_distance of p
+                @constraint model sum(x -> x^2, r - p) <= max_cop_distance^2
+            end
+
             for m in 1 : num_regions
                 region = regions(m)
                 z = z_vars[piece, contact, region]
@@ -307,27 +330,6 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
                 # λs should be zero when region is not active
                 @constraint model λ_vars[piece, contact, region] .<= z
 
-                p̄ = p̄_vars[piece, contact, region]
-                p̄_min, p̄_max = p̄_extrema[region]
-                set_lower_bound.(p̄, p̄_min)
-                set_upper_bound.(p̄, p̄_max)
-                A = region_data[m].A
-                b = region_data[m].b
-                transform = region_data[m].transform
-
-                # Contact position constraints
-                @constraint model A * p̄ .<= b
-                p_aux = @variable model [1 : 3]
-                @constraint model p_aux .== p - transform([p̄; 0])
-                if optimizer_does_indicator_constraints
-                    for i in eachindex(p_aux)
-                        MOI.add_constraint(optimizer, MOI.VectorOfVariables([z; p_aux]), SCIP.IndicatorSet(setindex!(zeros(3), +1, i), 0.0))
-                        MOI.add_constraint(optimizer, MOI.VectorOfVariables([z; p_aux]), SCIP.IndicatorSet(setindex!(zeros(3), -1, i), 0.0))
-                    end
-                else
-                    @constraint model  p_aux .<= Mr * (1 - z)
-                    @constraint model -p_aux .<= Mr * (1 - z)
-                end
 
                 # CoP constraints
                 r̄_min, r̄_max = r̄_extrema[region]
