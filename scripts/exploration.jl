@@ -75,20 +75,20 @@ function create_environment()
             Float64[1 0; 0 1; -1 0; 0 -1],
             0.2 * ones(4)
     ))
-    push!(region_data, ContactRegion(
-            AffineMap(one(RotMatrix{3}) * RotXYZ(-0.1, 0.2, 0.3), SVector(0.85, 1.15, 0.1)),
-            0.7,
-            0.0,
-            Float64[1 0; 0 1; -1 0; 0 -1],
-            0.2 * ones(4)
-    ))
-    push!(region_data, ContactRegion(
-        AffineMap(one(RotMatrix{3}) * RotXYZ(0.0, 0.0, 0.0), SVector(1.7, 1.2, 0.2)),
-        0.7,
-        0.0,
-        Float64[1 0; 0 1; -1 0; 0 -1],
-        0.2 * ones(4)
-    ))
+    # push!(region_data, ContactRegion(
+    #         AffineMap(one(RotMatrix{3}) * RotXYZ(-0.1, 0.2, 0.3), SVector(0.85, 1.15, 0.1)),
+    #         0.7,
+    #         0.0,
+    #         Float64[1 0; 0 1; -1 0; 0 -1],
+    #         0.2 * ones(4)
+    # ))
+    # push!(region_data, ContactRegion(
+    #     AffineMap(one(RotMatrix{3}) * RotXYZ(0.0, 0.0, 0.0), SVector(1.7, 1.2, 0.2)),
+    #     0.7,
+    #     0.0,
+    #     Float64[1 0; 0 1; -1 0; 0 -1],
+    #     0.2 * ones(4)
+    # ))
     region_data
 end
 
@@ -284,7 +284,7 @@ problem = CentroidalTrajectoryProblem(optimizer_factory, region_data, c0, ċ0, 
     min_Δt=0.6, max_Δt=1.5,
     max_cop_distance=max_cop_distance, min_com_to_contact_distance=min_com_to_contact_distance,
     max_com_to_contact_distance=max_com_to_contact_distance, min_inter_contact_distance=min_inter_contact_distance,
-    num_pieces=12, c_degree=3,
+    num_pieces=4, c_degree=3,
     objective_type=ObjectiveTypes.FEASIBILITY);
     # objective_type=ObjectiveTypes.MAX_HEIGHT);
 
