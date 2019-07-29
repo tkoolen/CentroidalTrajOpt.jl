@@ -40,7 +40,7 @@ version = "0.3.0"
 
 [[BARON]]
 deps = ["MathOptInterface", "MathProgBase", "Test"]
-git-tree-sha1 = "5b61de419a5a1560fa0786583d794a61d42cdac6"
+git-tree-sha1 = "f76c3104dc70fd3fa4eb75cd4fd4e6ccaa71093a"
 repo-rev = "tk/moi"
 repo-url = "git@github.com:tkoolen/BARON.jl.git"
 uuid = "2e2ca445-9e14-5b13-8677-4410f177f82b"
@@ -250,9 +250,9 @@ version = "1.5.1"
 
 [[FFMPEG]]
 deps = ["BinaryProvider", "Libdl"]
-git-tree-sha1 = "5fbb3092252b78c6082a5cce2316c60a6152fbc9"
+git-tree-sha1 = "1dd2128ff10894081f30931b355dc892d1352de9"
 uuid = "c87230d0-a227-11e9-1b43-d7ebe4e7570a"
-version = "0.2.1"
+version = "0.2.2"
 
 [[FastRounding]]
 deps = ["ErrorfreeArithmetic", "Test"]
