@@ -32,16 +32,16 @@ function CentroidalTrajectoryResult(problem::CentroidalTrajectoryProblem)
     end
 
     # Contact positions
-    p_vals = map(val, problem.p_vars)
-    ps = map(contacts.val) do contact
-        subfunctions = [Constant(map(k -> p_vals[pieces(i), contacts(contact), coords(k)], coords.val)) for i in pieces.val]
+    r_vals = map(val, problem.r_vars)
+    rs = map(contacts.val) do contact
+        subfunctions = [Constant(map(k -> r_vals[pieces(i), contacts(contact), coords(k)], coords.val)) for i in pieces.val]
         Piecewise(subfunctions, break_times)
     end
 
     # CoPs
-    r_vals = map(val, problem.r_vars)
-    rs = map(contacts.val) do contact
-        subfunctions = [poly_cat(map(k -> poly_piece_val(r_vals, Δt_vals[i], pieces(i), coords(k), contacts(contact)), coords.val)) for i in pieces.val]
+    p_vals = map(val, problem.p_vars)
+    ps = map(contacts.val) do contact
+        subfunctions = [poly_cat(map(k -> poly_piece_val(p_vals, Δt_vals[i], pieces(i), coords(k), contacts(contact)), coords.val)) for i in pieces.val]
         Piecewise(subfunctions, break_times)
     end
 
@@ -59,7 +59,7 @@ function CentroidalTrajectoryResult(problem::CentroidalTrajectoryProblem)
         Piecewise(subfunctions, break_times)
     end
 
-    CentroidalTrajectoryResult(break_times, c, fs, ps, rs, #=τns,=# zs)
+    CentroidalTrajectoryResult(break_times, c, fs, rs, ps, #=τns,=# zs)
 end
 
 function solve!(problem::CentroidalTrajectoryProblem; ignore_optimize_hook::Bool=problem.model.optimize_hook === nothing)

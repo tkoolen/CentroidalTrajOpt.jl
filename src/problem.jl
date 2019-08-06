@@ -14,9 +14,9 @@ struct CentroidalTrajectoryProblem
     c_vars
     f_vars
     f̄_vars
-    p_vars
     r_vars
-    r̄_vars
+    p_vars
+    p̄_vars
     Δts
     z_vars
 
@@ -42,8 +42,8 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
         ċ0::AbstractVector{<:Number},
         contacts0::AbstractVector{<:Union{Pair{<:ContactRegion, <:AbstractVector}, Nothing}};
         cf = nothing,
-        c_degree = 3,
-        r_degree = c_degree,
+        com_degree = 3,
+        cop_degree = com_degree,
         num_pieces = 2,
         g = SVector(0.0, 0.0, -9.81),
         max_cop_distance = 0.1,
@@ -57,19 +57,19 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
         c_margin_z_min = 0.5,
         c_margin_z_max = 1.2,
         max_force = 3 * norm(g),
-        Δpmax = 0.7 # TODO
+        Δrmax = 0.7 # TODO
     )
 
-    c_num_coeffs = c_degree + 1
+    c_num_coeffs = com_degree + 1
     f_num_coeffs = c_num_coeffs - 2
-    r_num_coeffs = r_degree + 1
+    p_num_coeffs = cop_degree + 1
     num_regions = length(region_data)
     num_contacts = length(contacts0)
 
     # Axes
     c_coeffs = Axis{:c_coeff}(1 : c_num_coeffs)
     f_coeffs = Axis{:f_coeff}(1 : f_num_coeffs)
-    r_coeffs = Axis{:r_coeff}(1 : r_num_coeffs)
+    p_coeffs = Axis{:r_coeff}(1 : p_num_coeffs)
     contacts = Axis{:contact}(1 : num_contacts)
     regions = Axis{:region}(1 : num_regions)
     pieces = Axis{:piece}(1 : num_pieces)
@@ -123,29 +123,29 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
     # Contact normals
     Rs = AxisArray(map(data -> data.transform.linear, region_data), regions)
     ns = map(R -> R[:, 3], Rs)
-
+    
     # Contact location extrema (local coordinates)
-    p̄_extrema = AxisArray(map(region -> polyhedron_extrema(polyhedron(hrep(region.A, region.b))), region_data), regions)
-    r̄_extrema = map(((p̄_min, p̄_max),) -> (p̄_min .- max_cop_distance, p̄_max .+ max_cop_distance), p̄_extrema)
-    p_vertices = mapreduce(vcat, 1 : num_regions) do m
+    r̄_extrema = AxisArray(map(region -> polyhedron_extrema(polyhedron(hrep(region.A, region.b))), region_data), regions)
+    p̄_extrema = map(((p̄_min, p̄_max),) -> (p̄_min .- max_cop_distance, p̄_max .+ max_cop_distance), r̄_extrema)
+    r_vertices = mapreduce(vcat, 1 : num_regions) do m
         let region = region_data[m]
             map(Polyhedra.points(polyhedron(hrep(region.A, region.b)))) do p̄_vertex
                 region.transform([p̄_vertex; 0])
             end
         end
     end
-    p_min, p_max = polyhedron_extrema(polyhedron(vrep(p_vertices)))
-    r_min, r_max = p_min .- max_cop_distance, p_max .+ max_cop_distance
-    c_min, c_max = r_min - SVector(c_margin_xy, c_margin_xy, -c_margin_z_min), r_max + SVector(c_margin_xy, c_margin_xy, c_margin_z_max)
+    r_min, r_max = polyhedron_extrema(polyhedron(vrep(r_vertices)))
+    p_min, p_max = r_min .- max_cop_distance, r_max .+ max_cop_distance
+    c_min, c_max = p_min - SVector(c_margin_xy, c_margin_xy, -c_margin_z_min), p_max + SVector(c_margin_xy, c_margin_xy, c_margin_z_max)
 
     # Continuous variables
     c_vars = axis_array_vars(model, (i, k, l) -> "C[p$i, $k, $l]",pieces, coords, c_coeffs)
     f_vars = axis_array_vars(model, (i, j, k, l) -> "F[p$i, c$j, $k, $l]", pieces, contacts, coords, f_coeffs)
     f̄_vars = axis_array_vars(model, (i, j, k, l, m) -> "F̄[p$i, c$j, $k, $l, r$m]", pieces, contacts, coords, f_coeffs, regions)
-    p_vars = axis_array_vars(model, (i, j, k) -> "P[p$i, c$j, $k]", pieces, contacts, coords)
-    p̄_vars = axis_array_vars(model, (i, j, k, m) -> "P̄[p$i, c$j, $k, r$m]", pieces, contacts, coords2d, regions)
-    r_vars = axis_array_vars(model, (i, j, k, l) -> "R[p$i, c$j, $k, $l]", pieces, contacts, coords, r_coeffs)
-    r̄_vars = axis_array_vars(model, (i, j, k, l, m) -> "R̄[p$i, c$j, $k, $l, r$m]", pieces, contacts, coords2d, r_coeffs, regions)
+    r_vars = axis_array_vars(model, (i, j, k) -> "P[p$i, c$j, $k]", pieces, contacts, coords)
+    r̄_vars = axis_array_vars(model, (i, j, k, m) -> "P̄[p$i, c$j, $k, r$m]", pieces, contacts, coords2d, regions)
+    p_vars = axis_array_vars(model, (i, j, k, l) -> "R[p$i, c$j, $k, $l]", pieces, contacts, coords, p_coeffs)
+    p̄_vars = axis_array_vars(model, (i, j, k, l, m) -> "R̄[p$i, c$j, $k, $l, r$m]", pieces, contacts, coords2d, p_coeffs, regions)
 
     #@variable model objval
     if objective_type == ObjectiveTypes.MIN_EXCURSION
@@ -186,20 +186,20 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
                 @constraint model sum(z_vars[piece, contact]) <= 1
             end
 
-            p = p_vars[piece, contact]
-            set_lower_bound.(p, p_min)
-            set_upper_bound.(p, p_max)
+            r = r_vars[piece, contact]
+            set_lower_bound.(r, r_min)
+            set_upper_bound.(r, r_max)
             if i == 1
                 # Initial contact assignment.
                 if contacts0[j] === nothing
                     @constraint model sum(z_vars[piece, contact]) == 0
                 else
-                    region_data0, p0 = contacts0[j]
+                    region_data0, r0 = contacts0[j]
                     m = findfirst(isequal(region_data0), region_data)
                     z_var = z_vars[piece, contact, regions(m)]
                     fix(z_var, 1, force=true)
                     # unset_binary(z_var) # to make Alpine happpy
-                    fix.(p, p0, force=true)
+                    fix.(r, r0, force=true)
                 end
             else
                 # Each contact must be unassigned for one piece before it can be reassigned to a region.
@@ -215,15 +215,15 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
                 # Two swing segments in a row is not allowed.
                 @constraint model sum(z_vars[piece, contact]) + sum(z_vars[pieces(i - 1), contact]) >= 1
 
-                # Contact position p may only change when the contact is not assigned to a region,
+                # Contact reference position r may only change when the contact is not assigned to a region,
                 # i.e., when ∑ₘ zᵢ,ⱼ,ₘ = 0.
-                Δp = p - p_vars[pieces(i - 1), contact]
+                Δr = r - r_vars[pieces(i - 1), contact]
                 # @constraint model sum(x -> x^2, Δp) <= (1 - sum(z_vars[piece, contact])) * Δpmax^2
                 z_no_contact = @variable model
                 set_binary(z_no_contact)
                 @constraint model z_no_contact == 1 - sum(z_vars[piece, contact])
-                @constraint model  Δp .<= z_no_contact * Δpmax
-                @constraint model -Δp .<= z_no_contact * Δpmax
+                @constraint model  Δr .<= z_no_contact * Δrmax
+                @constraint model -Δr .<= z_no_contact * Δrmax
             end
         end
 
@@ -252,14 +252,14 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
         fs = [[BezierCurve(f_vars[piece, contacts(j), coords(k)]...) for k in coords.val] for j in contacts.val]
 
         # CoPs (global)
-        rs = [[BezierCurve(r_vars[piece, contacts(j), coords(k)]...) for k in coords.val] for j in contacts.val]
+        ps = [[BezierCurve(p_vars[piece, contacts(j), coords(k)]...) for k in coords.val] for j in contacts.val]
 
         # Dynamics
         ftot = sum(fs)
         constrain_poly_equal.(model, c′′, identity((g + ftot) .* Δtsqs[i]))
 
         # Torque balance
-        τ = sum(Polynomial.(rs[j]) × Polynomial.(fs[j]) for j = 1 : num_contacts) -
+        τ = sum(Polynomial.(ps[j]) × Polynomial.(fs[j]) for j = 1 : num_contacts) -
             Polynomial.(c) × Polynomial.(ftot)
         τ = map(x -> Polynomial(simplify.(model, x.coeffs)), τ)
         constrain_poly_equal.(model, τ, 0)
@@ -270,58 +270,58 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
         Mr = 2.0
         for j in 1 : num_contacts
             contact = contacts(j)
-            p = p_vars[piece, contact]
+            r = r_vars[piece, contact]
             for m in 1 : num_regions
                 region = regions(m)
-                p̄ = p̄_vars[piece, contact, region]
-                p̄_min, p̄_max = p̄_extrema[region]
-                set_lower_bound.(p̄, p̄_min)
-                set_upper_bound.(p̄, p̄_max)
+                r̄ = r̄_vars[piece, contact, region]
+                r̄_min, r̄_max = r̄_extrema[region]
+                set_lower_bound.(r̄, r̄_min)
+                set_upper_bound.(r̄, r̄_max)
                 A = region_data[m].A
                 b = region_data[m].b
                 transform = region_data[m].transform
                 z = z_vars[piece, contact, region]
 
                 # Contact position constraints
-                @constraint model A * p̄ .<= b
-                p_aux = @variable model [1 : 3]
-                @constraint model p_aux .== p - transform([p̄; 0])
+                @constraint model A * r̄ .<= b
+                r_aux = @variable model [1 : 3]
+                @constraint model r_aux .== r - transform([r̄; 0])
                 if optimizer_does_indicator_constraints
-                    for i in eachindex(p_aux)
-                        MOI.add_constraint(optimizer, MOI.VectorOfVariables([z; p_aux]), SCIP.IndicatorSet(setindex!(zeros(3), +1, i), 0.0))
-                        MOI.add_constraint(optimizer, MOI.VectorOfVariables([z; p_aux]), SCIP.IndicatorSet(setindex!(zeros(3), -1, i), 0.0))
+                    for i in eachindex(r_aux)
+                        MOI.add_constraint(optimizer, MOI.VectorOfVariables([z; r_aux]), SCIP.IndicatorSet(setindex!(zeros(3), +1, i), 0.0))
+                        MOI.add_constraint(optimizer, MOI.VectorOfVariables([z; r_aux]), SCIP.IndicatorSet(setindex!(zeros(3), -1, i), 0.0))
                     end
                 else
-                    @constraint model  p_aux .<= Mr * (1 - z)
-                    @constraint model -p_aux .<= Mr * (1 - z)
+                    @constraint model  r_aux .<= Mr * (1 - z)
+                    @constraint model -r_aux .<= Mr * (1 - z)
                 end
 
                 # CoP constraints
-                r̄_min, r̄_max = r̄_extrema[region]
-                for l = 1 : r_num_coeffs
-                    coeff = r_coeffs(l)
-                    r = r_vars[piece, contact, coeff]
-                    set_lower_bound.(r, r_min)
-                    set_upper_bound.(r, r_max)
-                    r̄ = r̄_vars[piece, contact, coeff, region]
-                    set_lower_bound.(r̄, r̄_min)
-                    set_upper_bound.(r̄, r̄_max)
-                    # @constraint model A * r̄ .<= b
-                    r_aux = @variable model [1 : 3]
-                    @constraint model r_aux .== r - transform([r̄; 0])
+                p̄_min, p̄_max = p̄_extrema[region]
+                for l = 1 : p_num_coeffs
+                    coeff = p_coeffs(l)
+                    p = p_vars[piece, contact, coeff]
+                    set_lower_bound.(p, p_min)
+                    set_upper_bound.(p, p_max)
+                    p̄ = p̄_vars[piece, contact, coeff, region]
+                    set_lower_bound.(p̄, p̄_min)
+                    set_upper_bound.(p̄, p̄_max)
+                    # @constraint model A * p̄ .<= b
+                    p_aux = @variable model [1 : 3]
+                    @constraint model p_aux .== p - transform([p̄; 0])
                     if optimizer_does_indicator_constraints
-                        for i in eachindex(r_aux)
-                            MOI.add_constraint(optimizer, MOI.VectorOfVariables([z; r_aux]), SCIP.IndicatorSet(setindex!(zeros(3), +1, i), 0.0))
-                            MOI.add_constraint(optimizer, MOI.VectorOfVariables([z; r_aux]), SCIP.IndicatorSet(setindex!(zeros(3), -1, i), 0.0))
+                        for i in eachindex(p_aux)
+                            MOI.add_constraint(optimizer, MOI.VectorOfVariables([z; p_aux]), SCIP.IndicatorSet(setindex!(zeros(3), +1, i), 0.0))
+                            MOI.add_constraint(optimizer, MOI.VectorOfVariables([z; p_aux]), SCIP.IndicatorSet(setindex!(zeros(3), -1, i), 0.0))
                         end
                     else
-                        @constraint model  r_aux .<= Mr * (1 - z)
-                        @constraint model -r_aux .<= Mr * (1 - z)
+                        @constraint model  p_aux .<= Mr * (1 - z)
+                        @constraint model -p_aux .<= Mr * (1 - z)
                     end
                     if max_cop_distance == 0
-                        @constraint model r .== p
+                        @constraint model p .== r
                     else
-                        @constraint model sum(x -> x^2, r - p) <= max_cop_distance^2
+                        @constraint model sum(x -> x^2, p - r) <= max_cop_distance^2
                         # constrain_l1_norm(model, r - p, √2 / 2 * max_cop_distance; add_bounds=true)
                     end
                 end
@@ -376,16 +376,16 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
         # CoM kinematic constraints
         for j in 1 : num_contacts
             contact = contacts(j)
-            p = p_vars[piece, contact]
+            r = r_vars[piece, contact]
             for l in 1 : c_num_coeffs
                 cpoint = map(x -> x.coeffs[l], c)
-                # @constraint model cpoint[3] - p[3] >= 0.75 # TODO
-                @constraint model sum(x -> x^2, cpoint - p) >= min_com_to_contact_distance^2
+                # @constraint model cpoint[3] - r[3] >= 0.75 # TODO
+                @constraint model sum(x -> x^2, cpoint - r) >= min_com_to_contact_distance^2
                 # set_lower_bound(cpoint[3], 0.7)
-                # @constraint model cpoint - p .<= 1.5
-                # @constraint model p - cpoint .<= 1.5
-                # @constraint model sum(x -> x^2, cpoint - p) >= 0.5^2 # TODO
-                @constraint model sum(x -> x^2, cpoint - p) <= max_com_to_contact_distance^2
+                # @constraint model cpoint - r .<= 1.5
+                # @constraint model r - cpoint .<= 1.5
+                # @constraint model sum(x -> x^2, cpoint - r) >= 0.5^2 # TODO
+                @constraint model sum(x -> x^2, cpoint - r) <= max_com_to_contact_distance^2
             end
         end
 
@@ -394,15 +394,15 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
         if i > 1
             for j1 in 1 : num_contacts
                 contact1 = contacts(j1)
-                p1 = p_vars[piece, contact1]
+                r1 = r_vars[piece, contact1]
                 for j2 in j1 + 1 : num_contacts
                     contact2 = contacts(j2)
-                    p2 = p_vars[piece, contact2]
-                    @constraint model sum(x -> x^2, (p1 - p2)) >= min_inter_contact_distance^2
+                    r2 = r_vars[piece, contact2]
+                    @constraint model sum(x -> x^2, (r1 - r2)) >= min_inter_contact_distance^2
                 end
             end
             # FIXME: hack:
-            @constraint model p_vars[piece, contacts(1), coords(2)] - p_vars[piece, contacts(2), coords(2)] >= -max_cop_distance
+            @constraint model r_vars[piece, contacts(1), coords(2)] - r_vars[piece, contacts(2), coords(2)] >= -max_cop_distance
         end
 
         cprev = c
@@ -411,7 +411,7 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
 
     CentroidalTrajectoryProblem(model,
         c_coeffs, f_coeffs, contacts, regions, pieces, coords, coords2d,
-        c_vars, f_vars, f̄_vars, p_vars, r_vars, r̄_vars, Δts, z_vars,
+        c_vars, f_vars, f̄_vars, r_vars, p_vars, p̄_vars, Δts, z_vars,
         ns, friction_cone_quadratic_constraints
     )
 end
