@@ -284,7 +284,7 @@ problem = CentroidalTrajectoryProblem(optimizer_factory, region_data, c0, ċ0, 
     min_Δt=0.6, max_Δt=1.5,
     max_cop_distance=max_cop_distance, min_com_to_contact_distance=min_com_to_contact_distance,
     max_com_to_contact_distance=max_com_to_contact_distance, min_inter_contact_distance=min_inter_contact_distance,
-    num_pieces=12, com_degree=3,
+    num_pieces=11, com_degree=3,
     objective_type=ObjectiveTypes.FEASIBILITY);
     # objective_type=ObjectiveTypes.MAX_HEIGHT);
 
