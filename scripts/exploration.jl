@@ -463,7 +463,7 @@ end
 ## Set up visualizer for creating videos
 video = false
 if video
-    open(vis, Blink.Window(Dict(:width => 1280, :height => 720, :useContentSize => true)))
+    open(vis, Blink.Window(Dict(:width => 1280, :height => 960, :useContentSize => true)))
     sleep(1)
     setanimation!(vis, merge(plan_animation, sim_animation));
 end
