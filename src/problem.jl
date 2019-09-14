@@ -123,7 +123,7 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
     # Contact normals
     Rs = AxisArray(map(data -> data.transform.linear, region_data), regions)
     ns = map(R -> R[:, 3], Rs)
-    
+
     # Contact location extrema (local coordinates)
     r̄_extrema = AxisArray(map(region -> polyhedron_extrema(polyhedron(hrep(region.A, region.b))), region_data), regions)
     p̄_extrema = map(((p̄_min, p̄_max),) -> (p̄_min .- max_cop_distance, p̄_max .+ max_cop_distance), r̄_extrema)
@@ -153,6 +153,8 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
         @objective model Min sum(x -> x ⋅ x, (c_vars[pieces(i), c_coeffs(l)] - c0) for i in 1 : num_pieces, l in 1 : c_num_coeffs)
     elseif objective_type == ObjectiveTypes.MAX_HEIGHT
         @objective model Max sum(c_vars[c_coeffs(3)])
+    else
+        @objective model Min 0
     end
     # @objective model Max sum(z_vars)
 
@@ -331,9 +333,11 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
         # Contact force/torque constraints
         for j in 1 : num_contacts
             contact = contacts(j)
+            μmax = 0.0
             for m in 1 : num_regions
                 region = regions(m)
                 μ = region_data[m].μ
+                μmax = max(μ, μmax)
                 μrot = region_data[m].μrot
                 R = Rs[region]
                 n = ns[region]
@@ -369,7 +373,10 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
             end
             for l in 1 : f_num_coeffs
                 coeff = f_coeffs(l)
-                @constraint model f_vars[piece, contact, coeff] .== sum(Rs[regions(m)] * f̄_vars[piece, contact, coeff, regions(m)] for m in 1 : num_regions)
+                f = f_vars[piece, contact, coeff]
+                set_lower_bound.(f, -max(μmax, 1) * max_force)
+                set_upper_bound.(f, +max(μmax, 1) * max_force)
+                @constraint model f .== sum(Rs[regions(m)] * f̄_vars[piece, contact, coeff, regions(m)] for m in 1 : num_regions)
             end
         end
 
