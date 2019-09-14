@@ -31,6 +31,7 @@ function MeshCatMechanisms.setelement!(mvis::MechanismVisualizer, contact_model:
                 setelement!(mvis, frame, element.geometry, args...)
             elseif geometry isa Contact.HRep
                 setelement!(mvis, frame, GLNormalMesh(polyhedron(hrep(geometry))))
+                setobject!(mvis[frame][:triad], Triad(0.1))
             end
         end
     end
