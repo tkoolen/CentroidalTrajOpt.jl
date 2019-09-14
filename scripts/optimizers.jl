@@ -25,7 +25,7 @@ function scip_optimize_hook(model::JuMP.Model)
     # SCIP.set_parameter(mscip, "heuristics/feaspump/freq", 5)
     SCIP.set_parameter(mscip, "heuristics/rens/freq", -1)
     SCIP.set_parameter(mscip, "reoptimization/enable", true)
-    SCIP.set_parameter(mscip, "limits/time", 2 * 60)
+    # SCIP.set_parameter(mscip, "limits/time", 2 * 60)
     # SCIP.set_parameter(mscip, "limits/time", 2 * 60 * 60)
     ret = MOI.optimize!(caching_optimizer)
     @assert caching_optimizer.optimizer.model.mscip === mscip
@@ -45,8 +45,8 @@ end
 
 
 using Ipopt
-# ENV["JULIA_IPOPT_LIBRARY_PATH"] = "/home/twan/code/ipopt/Ipopt-3.12.12/lib"
-# ENV["JULIA_IPOPT_EXECUTABLE_PATH"] = "/home/twan/code/ipopt/Ipopt-3.12.12"
+# ENV["JULIA_IPOPT_LIBRARY_PATH"] = "/home/twan/code/ipopt/CoinIpopt/build/lib"
+# ENV["JULIA_IPOPT_EXECUTABLE_PATH"] = "/home/twan/code/ipopt/CoinIpopt/build/bin"
 # import Pkg; Pkg.build("Ipopt")
 
 function ipopt_optimizer_factory()
@@ -81,6 +81,7 @@ end
 using BARON
 function baron_optimizer_factory()
     with_optimizer(BARON.Optimizer;
+         CplexLibName="/opt/ibm/ILOG/CPLEX_Studio128/cplex/bin/x86-64_linux/libcplex1280.so",
          threads=Sys.CPU_THREADS ÷ 2, MaxTime=5 * 60 * 60, PrTimeFreq=5.,
          AllowFilterSD=1, AllowFilterSQP=1, AllowIpopt=1#=, NumLoc=20, LocRes=1=#)
 end

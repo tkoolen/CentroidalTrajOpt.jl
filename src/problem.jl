@@ -114,6 +114,11 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
             @objective model Min sum(Δts)
         end
     end
+    # Δts = AxisArray([ 1.0910477104335914
+    #     0.6545247110231425
+    #     0.6014271582441553
+    #     0.848420003941298 ], pieces)
+    # Δtsqs = map(x -> x^2, Δts)
 
     # Contact indicators. z[pieces(i), contacts(j), regions(m)] == 1 implies that
     # during piece i, contact j is in contact with region m.
@@ -374,8 +379,8 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
             for l in 1 : f_num_coeffs
                 coeff = f_coeffs(l)
                 f = f_vars[piece, contact, coeff]
-                set_lower_bound.(f, -max(μmax, 1) * max_force)
-                set_upper_bound.(f, +max(μmax, 1) * max_force)
+                # set_lower_bound.(f, -max(μmax, 1) * max_force)
+                # set_upper_bound.(f, +max(μmax, 1) * max_force)
                 @constraint model f .== sum(Rs[regions(m)] * f̄_vars[piece, contact, coeff, regions(m)] for m in 1 : num_regions)
             end
         end
