@@ -44,7 +44,7 @@ include("util.jl")
 function create_atlas()
     urdf = AtlasRobot.urdfpath()
     mechanism = parse_urdf(urdf, floating=true, remove_fixed_tree_joints=false)
-    link_colors = Dict(map(body -> string(body) => RGBA(0.7f0, 0.7f0, 0.7f0, 0.5f0), bodies(mechanism)))
+    link_colors = Dict(map(body -> string(body) => RGBA(0.7f0, 0.7f0, 0.7f0, 0.3f0), bodies(mechanism)))
     visuals = URDFVisuals(AtlasRobot.urdfpath(); package_path=[AtlasRobot.packagepath()], link_colors=link_colors)
     remove_fixed_tree_joints!(mechanism)
     foot_points = AtlasRobot.foot_contact_points(mechanism)
@@ -75,20 +75,20 @@ function create_environment()
             Float64[1 0; 0 1; -1 0; 0 -1],
             0.2 * ones(4)
     ))
-    # push!(region_data, ContactRegion(
-    #         AffineMap(one(RotMatrix{3}) * RotXYZ(-0.1, 0.2, 0.3), SVector(0.85, 1.15, 0.1)),
-    #         0.7,
-    #         0.0,
-    #         Float64[1 0; 0 1; -1 0; 0 -1],
-    #         0.2 * ones(4)
-    # ))
-    # push!(region_data, ContactRegion(
-    #     AffineMap(one(RotMatrix{3}) * RotXYZ(0.0, 0.0, 0.0), SVector(1.7, 1.2, 0.2)),
-    #     0.7,
-    #     0.0,
-    #     Float64[1 0; 0 1; -1 0; 0 -1],
-    #     0.2 * ones(4)
-    # ))
+    push!(region_data, ContactRegion(
+            AffineMap(one(RotMatrix{3}) * RotXYZ(-0.1, 0.2, 0.3), SVector(0.85, 1.15, 0.1)),
+            0.7,
+            0.0,
+            Float64[1 0; 0 1; -1 0; 0 -1],
+            0.2 * ones(4)
+    ))
+    push!(region_data, ContactRegion(
+        AffineMap(one(RotMatrix{3}) * RotXYZ(0.0, 0.0, 0.0), SVector(1.7, 1.2, 0.2)),
+        0.7,
+        0.0,
+        Float64[1 0; 0 1; -1 0; 0 -1],
+        0.2 * ones(4)
+    ))
     region_data
 end
 
@@ -260,9 +260,9 @@ cvis = CentroidalTrajectoryVisualizer(vis, region_data, norm(g), length(contact_
 ## Robot visualization
 mvis = MechanismVisualizer(mechanism, visuals, vis)
 copyto!(mvis, state0)
-for sole_frame in values(sole_frames)
-    setelement!(mvis, sole_frame, 0.1)
-end
+# for sole_frame in values(sole_frames)
+#     setelement!(mvis, sole_frame, 0.1)
+# end
 
 ## Environment visualization
 @time setelement!(mvis, contact_model)#, MeshLambertMaterial(color=RGBA(0.9, 0.9, 0.5, 0.95)))
@@ -278,14 +278,18 @@ sleep(1)
 ## Optimizer
 # optimizer_factory = baron_optimizer_factory()
 optimizer_factory = scip_optimizer_factory()
+# optimizer_factory = gurobi_optimizer_factory()
+# optimizer_factory = cplex_optimizer_factory()
+# optimizer_factory = ipopt_optimizer_factory()
 
 ## Problem
 problem = CentroidalTrajectoryProblem(optimizer_factory, region_data, c0, ċ0, contacts0;
     cf=cf, g=g,
     min_Δt=0.6, max_Δt=1.5,
+    # min_Δt=0.6, max_Δt=0.6,
     max_cop_distance=max_cop_distance, min_com_to_contact_distance=min_com_to_contact_distance,
     max_com_to_contact_distance=max_com_to_contact_distance, min_inter_contact_distance=min_inter_contact_distance,
-    num_pieces=4, com_degree=3,
+    num_pieces=12, com_degree=3,
     objective_type=ObjectiveTypes.FEASIBILITY);
     # objective_type=ObjectiveTypes.MAX_HEIGHT);
 
@@ -300,11 +304,15 @@ fix.(problem.z_vars[problem.pieces(problem.pieces[end]), problem.regions(problem
 if optimizer_factory.constructor == SCIP.Optimizer
     set_optimize_hook(problem.model, scip_optimize_hook)
 end
+if optimizer_factory.constructor == Ipopt.Optimizer
+    @info "Reformulating binary variables -> complementarity constraints"
+    complementarity_reformulate!(problem.model)
+end
 
 relax = optimizer_factory.constructor == Gurobi.Optimizer || optimizer_factory.constructor == CPLEX.Optimizer
 if relax
     @info "Relaxing bilinearities."
-    relaxbilinear!(problem.model, method=:Logarithmic1D, disc_level=17, constraints_to_skip=problem.friction_cone_quadratic_constraints)
+    relaxbilinear!(problem.model, method=:Logarithmic1D, disc_level=50, constraints_to_skip=problem.friction_cone_quadratic_constraints)
 end
 
 ## Feasibility
@@ -370,15 +378,20 @@ T = last(result.break_times)
 # @test ċ(T) ≈ zeros(3) atol=1e-12
 # @test c̈(T) ≈ zeros(3) atol=1e-12
 
+max_constraint_violation = 0.0
+
 for t in range(0, T, length=100)
     ftot = sum(fs[contact](t) for contact in problem.contacts.val)
 
     # Dynamics
-    @test c̈(t) ≈ g + ftot atol=1e-5
+    @test c̈(t) ≈ g + ftot atol=1e-3
 
     # Torque about CoM
     # τ = sum((rs[j](t) - c(t)) × fs[j](t) + n * τns[j](t) for j in problem.contacts.val)
     τ = sum((rs[j](t) - c(t)) × fs[j](t) for j in problem.contacts.val)
+
+    constraint_violation = norm(τ) / norm(g)
+    global max_constraint_violation = max(max_constraint_violation, constraint_violation)
 
     if !relax
         @test τ ≈ zeros(3) atol=1e-4
@@ -413,11 +426,12 @@ for t in range(0, T, length=100)
         end
     end
 end
+@info "Max constraint violation: $max_constraint_violation"
 
 # Continuity around breaks
 for t in result.break_times
-    @test c(t - 1e-8) ≈ c(t + 1e-8) atol=1e-5
-    @test ċ(t - 1e-8) ≈ ċ(t + 1e-8) atol=1e-5
+    @test c(t - 1e-8) ≈ c(t + 1e-8) atol=1e-3
+    @test ċ(t - 1e-8) ≈ ċ(t + 1e-8) atol=1e-3
 end
 
 ## Simulation
@@ -474,3 +488,6 @@ save = false
 if save
     CentroidalTrajOpt.Serialization.save_result(result)
 end
+
+set_state!(cvis, result, 0.0)
+copyto!(mvis, state0)
