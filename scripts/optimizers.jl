@@ -33,6 +33,7 @@ function scip_optimize_hook(model::JuMP.Model)
 end
 
 using AmplNLWriter
+AmplNLWriter.setdebug(true)
 
 function bonmin_optimizer_factory()
     with_optimizer(AmplNLWriter.Optimizer, "/home/twan/code/bonmin/Bonmin-1.8.7/build/bin/bonmin")
@@ -42,10 +43,23 @@ function couenne_optimizer_factory()
     with_optimizer(AmplNLWriter.Optimizer, "/home/twan/code/couenne/couenne")
 end
 
+
 using Ipopt
+# ENV["JULIA_IPOPT_LIBRARY_PATH"] = "/home/twan/code/ipopt/Ipopt-3.12.12/lib"
+# ENV["JULIA_IPOPT_EXECUTABLE_PATH"] = "/home/twan/code/ipopt/Ipopt-3.12.12"
+# import Pkg; Pkg.build("Ipopt")
 
 function ipopt_optimizer_factory()
     with_optimizer(Ipopt.Optimizer)
+end
+
+function complementarity_reformulate!(model::JuMP.Model)
+    for var in JuMP.all_variables(problem.model)
+        if JuMP.is_binary(var)
+            @constraint model var * (1 - var) == 0
+            JuMP.unset_binary(var)
+        end
+    end
 end
 
 # using Alpine
@@ -91,6 +105,10 @@ function cplex_optimizer_factory_continuous()
         CPX_PARAM_OPTIMALITYTARGET = CPLEX.CPX_OPTIMALITYTARGET_AUTO,
         CPX_PARAM_DEPIND = 3,
         CPXPARAM_MIP_Cuts_LiftProj = 3)
+end
+
+function cplex_optimizer_factory()
+    with_optimizer(CPLEX.Optimizer)
 end
 
 using Gurobi
