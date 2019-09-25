@@ -379,8 +379,8 @@ function CentroidalTrajectoryProblem(optimizer_factory::JuMP.OptimizerFactory,
             for l in 1 : f_num_coeffs
                 coeff = f_coeffs(l)
                 f = f_vars[piece, contact, coeff]
-                # set_lower_bound.(f, -max(μmax, 1) * max_force)
-                # set_upper_bound.(f, +max(μmax, 1) * max_force)
+                set_lower_bound.(f, -max(μmax, 1) * max_force)
+                set_upper_bound.(f, +max(μmax, 1) * max_force)
                 @constraint model f .== sum(Rs[regions(m)] * f̄_vars[piece, contact, coeff, regions(m)] for m in 1 : num_regions)
             end
         end
