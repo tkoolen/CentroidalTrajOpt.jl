@@ -55,7 +55,7 @@ end
 function set_com_trajectory!(vis::CentroidalTrajectoryVisualizer, result::CentroidalTrajectoryResult)
     ts = range(first(result.break_times), last(result.break_times); length=100)
     geometry = PointCloud([Point(result.center_of_mass(t)) for t in ts])
-    setobject!(vis.vis[:com_trajectory], LineSegments(geometry, LineBasicMaterial()))
+    setobject!(vis.vis[:com_trajectory], LineSegments(geometry, LineBasicMaterial(linewidth=3)))
     vis
 end
 
